@@ -101,9 +101,20 @@ class SatelliteTrackingController(
 
             override fun onAvoidanceEnded(userAdjustedFrequency: Double) {
                 _trackingState.value = TrackingState.TRACKING
-                // 更新基准频率为用户调整后的频率
-                handleUserAdjustment(userAdjustedFrequency)
-                LogManager.i(TAG, "【避让回调】用户调整完成，恢复自动跟踪，新基准: ${userAdjustedFrequency/1e6} MHz")
+                
+                // 根据当前模式选择不同的处理方法
+                if (_isCustomMode.value) {
+                    // 自定义模式：使用反向关系计算
+                    controllerScope.launch {
+                        val rangeRate = PredictiveDopplerCalculator.getPredictedRangeRate()
+                        handleCustomModeVfoAdjustment(userAdjustedFrequency, rangeRate)
+                        LogManager.i(TAG, "【避让回调-自定义模式】用户调整完成，使用反向关系计算，新基准: ${userAdjustedFrequency/1e6} MHz")
+                    }
+                } else {
+                    // 默认模式：使用loop计算
+                    handleUserAdjustment(userAdjustedFrequency)
+                    LogManager.i(TAG, "【避让回调-默认模式】用户调整完成，使用loop计算，新基准: ${userAdjustedFrequency/1e6} MHz")
+                }
             }
 
             override fun onPttStateChanged(isTransmitting: Boolean) {
