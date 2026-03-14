@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "satellites": [
+    {
+      "noradId": "25544",
+      "name": "ISS (ZARYA)",
+      "internationalDesignator": "98067A",
+      "tleLine1": "1 25544U 98067A   25071.15917150  .00009166  00000+0  17667-3 0  9996",
+      "tleLine2": "2 25544  51.6325  60.1463 0007984 183.4136 176.6799 15.48595269556711",
+      "category": "amateur",
+      "isFavorite": true
+    },
+    {
+      "noradId": "27607",
+      "name": "SAUDISAT 1C (SO-50)",
+      "internationalDesignator": "02058C",
+      "tleLine1": "1 27607U 02058C   25071.24773975  .00002178  00000+0  27383-3 0  9990",
+      "tleLine2": "2 27607  64.5526  68.8607 0075294 280.2549  79.0073 14.82795952250087",
+      "category": "amateur",
+      "isFavorite": true
+    },
+    {
+      "noradId": "7530",
+      "name": "OSCAR 7 (AO-7)",
+      "internationalDesignator": "74089B",
+      "tleLine1": "1 07530U 74089B   25071.26979351 -.00000028  00000+0  11357-3 0  9991",
+      "tleLine2": "2 07530 101.9968  83.4874 0011956 317.1237 110.4299 12.53696362348375",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "14129",
+      "name": "PHASE 3B (AO-10)",
+      "internationalDesignator": "83058B",
+      "tleLine1": "1 14129U 83058B   25070.76119173 -.00000050  00000+0  00000-0 0  9995",
+      "tleLine2": "2 14129  25.9232 235.9125 6045969  88.6671 335.5019  2.05871196293485",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "14781",
+      "name": "UOSAT 2 (UO-11)",
+      "internationalDesignator": "84021B",
+      "tleLine1": "1 14781U 84021B   25071.15753354  .00001641  00000+0  17360-3 0  9996",
+      "tleLine2": "2 14781  97.7946  37.8942 0008578 136.5782 223.6113 14.90516363242675",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "20442",
+      "name": "LUSAT (LO-19)",
+      "internationalDesignator": "90005G",
+      "tleLine1": "1 20442U 90005G   25070.99319135  .00000171  00000+0  77722-4 0  9998",
+      "tleLine2": "2 20442  98.8936  90.0855 0012432 128.1710 232.0595 14.34089018888464",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "22825",
+      "name": "EYESAT A (AO-27)",
+      "internationalDesignator": "93061C",
+      "tleLine1": "1 22825U 93061C   25071.15440858  .00000135  00000+0  68507-4 0  9997",
+      "tleLine2": "2 22825  98.6977 138.5662 0008841  32.2721 327.9001 14.30914026693129",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "24278",
+      "name": "JAS-2 (FO-29)",
+      "internationalDesignator": "96046B",
+      "tleLine1": "1 24278U 96046B   25071.16038665  .00000005  00000+0  42156-4 0  9995",
+      "tleLine2": "2 24278  98.5377 293.2457 0349719 348.3600  10.9604 13.53268841460048",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "25397",
+      "name": "TECHSAT 1B (GO-32)",
+      "internationalDesignator": "98043D",
+      "tleLine1": "1 25397U 98043D   25070.91764539  .00000106  00000+0  66020-4 0  9993",
+      "tleLine2": "2 25397  99.0028  61.2448 0002113 116.1037 244.0359 14.24406770437485",
+      "category": "amateur",
+      "isFavorite": false
+    },
+    {
+      "noradId": "26931",
+      "name": "PCSAT (NO-44)",
+      "internationalDesignator": "01043C",
+      "tleLine1": "1 26931U 01043C   25071.28240937  .00000166  00000+0  92742-4 0  9990",
+      "tleLine2": "2 26931  67.0502 134.9077 0007006 265.0323  94.9979 14.31913758276574",
+      "category": "amateur",
+      "isFavorite": false
+    }
+  ]
+}

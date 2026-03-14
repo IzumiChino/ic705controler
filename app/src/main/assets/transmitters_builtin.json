@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "transmitters": [
+    {
+      "uuid": "iss-fm",
+      "noradId": 25544,
+      "description": "ISS FM Transponder",
+      "uplinkLow": 145990000,
+      "uplinkHigh": 145990000,
+      "downlinkLow": 437800000,
+      "downlinkHigh": 437800000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    },
+    {
+      "uuid": "so-50-fm",
+      "noradId": 27607,
+      "description": "SO-50 FM Transponder",
+      "uplinkLow": 145850000,
+      "uplinkHigh": 145850000,
+      "downlinkLow": 436795000,
+      "downlinkHigh": 436795000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    },
+    {
+      "uuid": "ao-7-linear",
+      "noradId": 7530,
+      "description": "AO-7 Linear Transponder B",
+      "uplinkLow": 432125000,
+      "uplinkHigh": 432175000,
+      "downlinkLow": 145925000,
+      "downlinkHigh": 145975000,
+      "mode": "SSB",
+      "uplinkMode": "SSB",
+      "invert": true
+    },
+    {
+      "uuid": "ao-7-fm",
+      "noradId": 7530,
+      "description": "AO-7 FM Transponder",
+      "uplinkLow": 145850000,
+      "uplinkHigh": 145850000,
+      "downlinkLow": 29050000,
+      "downlinkHigh": 29050000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    },
+    {
+      "uuid": "ao-10-linear",
+      "noradId": 14129,
+      "description": "AO-10 Linear Transponder",
+      "uplinkLow": 435030000,
+      "uplinkHigh": 435180000,
+      "downlinkLow": 145775000,
+      "downlinkHigh": 145925000,
+      "mode": "SSB",
+      "uplinkMode": "SSB",
+      "invert": true
+    },
+    {
+      "uuid": "fo-29-linear",
+      "noradId": 24278,
+      "description": "FO-29 Linear Transponder",
+      "uplinkLow": 435800000,
+      "uplinkHigh": 435950000,
+      "downlinkLow": 145800000,
+      "downlinkHigh": 145950000,
+      "mode": "SSB",
+      "uplinkMode": "SSB",
+      "invert": true
+    },
+    {
+      "uuid": "go-32-fm",
+      "noradId": 25397,
+      "description": "GO-32 FM Transponder",
+      "uplinkLow": 435225000,
+      "uplinkHigh": 435225000,
+      "downlinkLow": 145930000,
+      "downlinkHigh": 145930000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    },
+    {
+      "uuid": "no-44-fm",
+      "noradId": 26931,
+      "description": "NO-44 FM Transponder",
+      "uplinkLow": 145827000,
+      "uplinkHigh": 145827000,
+      "downlinkLow": 144390000,
+      "downlinkHigh": 144390000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    },
+    {
+      "uuid": "ao-27-fm",
+      "noradId": 22825,
+      "description": "AO-27 FM Transponder",
+      "uplinkLow": 145850000,
+      "uplinkHigh": 145850000,
+      "downlinkLow": 436800000,
+      "downlinkHigh": 436800000,
+      "mode": "FM",
+      "uplinkMode": "FM",
+      "invert": false
+    }
+  ]
+}
