@@ -264,4 +264,9 @@ private const val TRANSMITTER_VALIDITY_DAYS = 30L
 
 ***
 
+## 捐助
+
+- 支付宝：18132886815
+
+
 **注意**: 本项目为业余无线电爱好者开发，使用时请遵守当地无线电法规。
