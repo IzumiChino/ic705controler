@@ -33,7 +33,7 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(
 
     companion object {
         const val DATABASE_NAME = "ic705_database.db"
-        const val DATABASE_VERSION = 10
+        const val DATABASE_VERSION = 11
 
         @Volatile
         private var instance: DatabaseHelper? = null
@@ -96,11 +96,11 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(
             )
         """.trimIndent())
 
-        // 创建地面站表
+        // 创建地面站表（移除name字段的UNIQUE约束，允许同名地面站）
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS $TABLE_STATIONS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 latitude REAL NOT NULL,
                 longitude REAL NOT NULL,
                 altitude REAL DEFAULT 0.0,
@@ -522,11 +522,10 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(
     }
 
     suspend fun insertStation(station: StationEntity): Long = withContext(Dispatchers.IO) {
-        writableDatabase.insertWithOnConflict(
+        writableDatabase.insert(
             TABLE_STATIONS,
             null,
-            station.toContentValues(),
-            SQLiteDatabase.CONFLICT_REPLACE
+            station.toContentValues()
         )
     }
 
@@ -534,11 +533,10 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(
         writableDatabase.beginTransaction()
         try {
             stations.forEach { station ->
-                writableDatabase.insertWithOnConflict(
+                writableDatabase.insert(
                     TABLE_STATIONS,
                     null,
-                    station.toContentValues(),
-                    SQLiteDatabase.CONFLICT_REPLACE
+                    station.toContentValues()
                 )
             }
             writableDatabase.setTransactionSuccessful()
@@ -595,6 +593,34 @@ class DatabaseHelper private constructor(context: Context) : SQLiteOpenHelper(
     suspend fun getStationCount(): Int = withContext(Dispatchers.IO) {
         readableDatabase.rawQuery("SELECT COUNT(*) FROM $TABLE_STATIONS", null).use { cursor ->
             if (cursor.moveToFirst()) cursor.getInt(0) else 0
+        }
+    }
+
+    /**
+     * 检查地面站名称是否已被其他记录使用（排除指定ID的记录）
+     * @param name 要检查的名称
+     * @param excludeId 要排除的记录ID（用于更新时排除自身）
+     * @return 如果名称已被使用返回true，否则返回false
+     */
+    suspend fun isStationNameExists(name: String, excludeId: Long? = null): Boolean = withContext(Dispatchers.IO) {
+        val selection = if (excludeId != null) {
+            "name = ? AND id != ?"
+        } else {
+            "name = ?"
+        }
+        val selectionArgs = if (excludeId != null) {
+            arrayOf(name, excludeId.toString())
+        } else {
+            arrayOf(name)
+        }
+        readableDatabase.query(
+            TABLE_STATIONS,
+            arrayOf("id"),
+            selection,
+            selectionArgs,
+            null, null, null
+        ).use { cursor ->
+            cursor.count > 0
         }
     }
     

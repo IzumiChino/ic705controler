@@ -48,6 +48,7 @@ import com.bh6aap.ic705Cter.service.BluetoothForegroundService
 import com.bh6aap.ic705Cter.notification.PassNotificationManager
 import com.bh6aap.ic705Cter.data.PassNotificationDataStore
 import com.bh6aap.ic705Cter.ui.components.BluetoothDeviceDialog
+import com.bh6aap.ic705Cter.ui.components.StationListDialog
 import com.bh6aap.ic705Cter.ui.components.getPairedDevices
 import com.bh6aap.ic705Cter.ui.theme.Ic705controlerTheme
 import android.content.Intent
@@ -168,6 +169,7 @@ class MainActivity : ComponentActivity() {
                 var transmitterUpdateTime by remember { mutableStateOf("尚未更新") }
                 var showSatelliteDialog by remember { mutableStateOf(false) }
                 var refreshStationTrigger by remember { mutableStateOf(0) }
+                var showStationListDialog by remember { mutableStateOf(false) }
 
                 // 从数据库加载TLE更新时间（支持 celestrak 和 satnogs）
                 LaunchedEffect(Unit) {
@@ -244,6 +246,10 @@ class MainActivity : ComponentActivity() {
                             onSettingsClick = {
                                 LogManager.i("MainActivity", "点击设置按钮，打开设置界面")
                                 SettingsActivity.start(this@MainActivity)
+                            },
+                            onLongPress = {
+                                LogManager.i("MainActivity", "长按GPS栏，打开地面站列表")
+                                showStationListDialog = true
                             }
                         )
                     }
@@ -605,6 +611,25 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                // 地面站列表弹窗
+                if (showStationListDialog) {
+                    StationListDialog(
+                        onDismiss = { showStationListDialog = false },
+                        onStationSelected = { selectedStation ->
+                            // 更新当前显示的地面站数据
+                            stationData = selectedStation
+                            maidenheadGrid = MaidenheadConverter.latLonToMaidenhead(
+                                selectedStation.latitude,
+                                selectedStation.longitude,
+                                precision = 8
+                            )
+                            Toast.makeText(this@MainActivity, "已切换到: ${selectedStation.name}", Toast.LENGTH_SHORT).show()
+                            LogManager.i("MainActivity", "切换到地面站: ${selectedStation.name}")
+                        },
+                        currentStationId = stationData?.id
+                    )
+                }
+
             }
         }
     }
@@ -838,6 +863,7 @@ fun GpsInfoBar(
     maidenheadGrid: String,
     onRefresh: () -> Unit,
     onSettingsClick: () -> Unit,
+    onLongPress: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // 获取状态栏高度和屏幕尺寸
@@ -897,11 +923,16 @@ fun GpsInfoBar(
                 }
             }
 
-            // 中间：GPS信息（可点击刷新）
+            // 中间：GPS信息（可点击刷新，长按弹出地面站列表）
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onRefresh() }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { onLongPress() }
+                        )
+                    }
                     .padding(horizontal = contentPadding, vertical = contentPadding),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween

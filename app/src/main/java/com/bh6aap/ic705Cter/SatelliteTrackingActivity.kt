@@ -3,6 +3,7 @@ package com.bh6aap.ic705Cter
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -144,11 +145,17 @@ class SatelliteTrackingActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         sensorManager.start()
+        // 卫星跟踪界面保持屏幕常亮
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        LogManager.i("SatelliteTracking", "界面恢复，启用屏幕常亮")
     }
 
     override fun onPause() {
         super.onPause()
         sensorManager.stop()
+        // 界面不可见时清除屏幕常亮标志
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        LogManager.i("SatelliteTracking", "界面暂停，清除屏幕常亮")
     }
 
     override fun onDestroy() {

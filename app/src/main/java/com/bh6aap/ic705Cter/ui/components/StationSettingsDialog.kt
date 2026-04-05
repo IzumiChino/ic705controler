@@ -1,5 +1,6 @@
 package com.bh6aap.ic705Cter.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import android.widget.Toast
@@ -23,6 +24,7 @@ import kotlinx.coroutines.withContext
 /**
  * 地面站设置对话框
  * 支持配置六位QTH定位符、经纬度、海拔等参数
+ * 提供两种保存方案：覆盖默认 / 添加到库
  */
 @Composable
 fun StationSettingsDialog(
@@ -35,7 +37,7 @@ fun StationSettingsDialog(
 
     // 当前地面站数据
     var currentStation by remember { mutableStateOf<StationEntity?>(null) }
-    
+
     // 输入字段
     var stationName by remember { mutableStateOf("") }
     var callsign by remember { mutableStateOf("") }
@@ -43,11 +45,14 @@ fun StationSettingsDialog(
     var latitude by remember { mutableStateOf("") }
     var longitude by remember { mutableStateOf("") }
     var altitude by remember { mutableStateOf("") }
-    
+
     // 错误提示
     var qthError by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    
+
+    // 保存模式：true=覆盖默认, false=添加到库
+    var saveAsDefault by remember { mutableStateOf(true) }
+
     // 加载当前地面站数据和呼号设置
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO) {
@@ -55,7 +60,7 @@ fun StationSettingsDialog(
             val station = dbHelper.getDefaultStation()
             // 加载呼号设置
             val savedCallsign = dbHelper.getCallsign()
-            
+
             withContext(Dispatchers.Main) {
                 currentStation = station
                 station?.let {
@@ -115,25 +120,6 @@ fun StationSettingsDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
-                    
-                    // 使用GPS获取位置按钮（暂时隐藏）
-                    // IconButton(
-                    //     onClick = {
-                    //         scope.launch {
-                    //             try {
-                    //                 // 这里简化处理，实际应该调用GPS管理器
-                    //                 Toast.makeText(context, "请使用启动时的GPS定位功能", Toast.LENGTH_SHORT).show()
-                    //             } catch (e: Exception) {
-                    //                 LogManager.e("StationSettings", "GPS获取失败", e)
-                    //             }
-                    //         }
-                    //     }
-                    // ) {
-                    //     Icon(
-                    //         imageVector = Icons.Default.MyLocation,
-                    //         contentDescription = "使用GPS位置"
-                    //     )
-                    // }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -155,7 +141,7 @@ fun StationSettingsDialog(
                     // 呼号
                     OutlinedTextField(
                         value = callsign,
-                        onValueChange = { 
+                        onValueChange = {
                             callsign = it.uppercase()
                         },
                         label = { Text("呼号 (用于CW预设)") },
@@ -167,7 +153,7 @@ fun StationSettingsDialog(
                     // QTH定位符（6位）
                     OutlinedTextField(
                         value = qthLocator,
-                        onValueChange = { 
+                        onValueChange = {
                             qthLocator = it.uppercase().take(6)
                         },
                         label = { Text("QTH定位符 (6位) *") },
@@ -219,6 +205,66 @@ fun StationSettingsDialog(
                         singleLine = true
                     )
 
+                    // 保存模式选择
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "保存方式",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                        )
+
+                        // 覆盖默认选项
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { saveAsDefault = true },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = saveAsDefault,
+                                onClick = { saveAsDefault = true }
+                            )
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(
+                                    text = "设为默认地面站",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "替换当前默认地面站，用于卫星跟踪",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // 添加到库选项
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { saveAsDefault = false },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = !saveAsDefault,
+                                onClick = { saveAsDefault = false }
+                            )
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(
+                                    text = "添加到地面站库",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "保存到库中，可在主界面长按GPS栏切换",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
                     // 错误信息
                     if (errorMessage != null) {
                         Text(
@@ -239,7 +285,7 @@ fun StationSettingsDialog(
                     TextButton(onClick = onDismiss) {
                         Text("取消")
                     }
-                    
+
                     Button(
                         onClick = {
                             // 验证输入
@@ -254,7 +300,7 @@ fun StationSettingsDialog(
                                         val lat = latitude.toDouble()
                                         val lon = longitude.toDouble()
                                         val alt = altitude.toDoubleOrNull() ?: 0.0
-                                        
+
                                         if (lat < -90.0 || lat > 90.0) {
                                             errorMessage = "纬度超出有效范围"
                                             return@Button
@@ -263,35 +309,60 @@ fun StationSettingsDialog(
                                             errorMessage = "经度超出有效范围"
                                             return@Button
                                         }
-                                        
+
                                         scope.launch(Dispatchers.IO) {
+                                            // 检查名称是否被其他地面站使用
+                                            val currentId = currentStation?.id
+                                            if (dbHelper.isStationNameExists(stationName, currentId)) {
+                                                withContext(Dispatchers.Main) {
+                                                    errorMessage = "地面站名称 '$stationName' 已被使用，请使用其他名称"
+                                                }
+                                                return@launch
+                                            }
+
                                             val station = StationEntity(
                                                 id = currentStation?.id ?: 0,
                                                 name = stationName,
                                                 latitude = lat,
                                                 longitude = lon,
                                                 altitude = alt,
-                                                isDefault = true,
+                                                isDefault = saveAsDefault,
                                                 notes = "QTH: $qthLocator",
                                                 updatedAt = System.currentTimeMillis()
                                             )
-                                            
-                                            if (currentStation != null) {
-                                                dbHelper.updateStation(station)
-                                                LogManager.i("StationSettings", "更新地面站: ${station.name}")
+
+                                            if (saveAsDefault) {
+                                                // 设为默认：清除其他默认地面站，然后插入/更新
+                                                if (currentStation != null && currentStation!!.id > 0) {
+                                                    // 更新现有记录
+                                                    dbHelper.updateStation(station)
+                                                    LogManager.i("StationSettings", "更新默认地面站: ${station.name}")
+                                                } else {
+                                                    // 新建默认地面站
+                                                    dbHelper.clearDefaultStation()
+                                                    dbHelper.insertStation(station)
+                                                    LogManager.i("StationSettings", "新建默认地面站: ${station.name}")
+                                                }
                                             } else {
-                                                dbHelper.insertStation(station)
-                                                LogManager.i("StationSettings", "新建地面站: ${station.name}")
+                                                // 添加到库：新建记录（非默认）
+                                                val newStation = station.copy(id = 0, isDefault = false)
+                                                dbHelper.insertStation(newStation)
+                                                LogManager.i("StationSettings", "添加地面站到库: ${station.name}")
                                             }
-                                            
+
                                             // 保存呼号设置
                                             if (callsign.isNotBlank()) {
                                                 dbHelper.saveCallsign(callsign)
                                                 LogManager.i("StationSettings", "保存呼号: $callsign")
                                             }
-                                            
+
                                             withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "地面站和呼号已保存", Toast.LENGTH_SHORT).show()
+                                                val message = if (saveAsDefault) {
+                                                    "已设为默认地面站"
+                                                } else {
+                                                    "已添加到地面站库"
+                                                }
+                                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                                 onStationSaved()
                                                 onDismiss()
                                             }
