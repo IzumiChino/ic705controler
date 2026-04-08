@@ -1357,11 +1357,14 @@ fun SatellitePassList(
     // 存储每个过境的通知状态
     var notificationStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
-    // 当前时间，用于过滤已结束的过境
+    // NTP时间管理器，用于获取准确时间
+    val ntpTimeManager = remember { com.bh6aap.ic705Cter.data.time.NtpTimeManager(context) }
+    // 当前时间，用于过滤已结束的过境（使用NTP校准时间）
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (isActive) {
-            currentTime = System.currentTimeMillis()
+            // 使用NTP校准时间，与过境计算使用的时间基准一致
+            currentTime = ntpTimeManager.getCachedAccurateTime()
             delay(1000L) // 每秒更新一次
         }
     }
@@ -1380,6 +1383,13 @@ fun SatellitePassList(
     // 同步滑块值与仰角值
     LaunchedEffect(minElevation) {
         sliderValue = minElevation.toFloat()
+    }
+    // 加载保存的仰角阈值
+    LaunchedEffect(Unit) {
+        notificationDataStore.getMinElevation().collect { elevation ->
+            minElevation = elevation.toDouble()
+            LogManager.i("SatellitePassList", "加载仰角阈值: ${elevation}°")
+        }
     }
     // 提醒提前时间（分钟）
     var reminderMinutes by remember { mutableStateOf(PassNotificationDataStore.DEFAULT_REMINDER_MINUTES) }
@@ -1550,6 +1560,10 @@ fun SatellitePassList(
                             if (newElevation != minElevation) {
                                 minElevation = newElevation
                                 LogManager.i("SatellitePassList", "【仰角过滤】设置仰角阈值: ${minElevation}°")
+                                // 保存仰角设置
+                                scope.launch {
+                                    notificationDataStore.setMinElevation(newElevation.toInt())
+                                }
                             }
                         },
                         modifier = Modifier

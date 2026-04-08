@@ -19,11 +19,14 @@ class PassNotificationDataStore(private val context: Context) {
 
     companion object {
         private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "pass_notifications")
-        
+
         // 默认提醒提前时间（分钟）
         const val DEFAULT_REMINDER_MINUTES = 5
         // 可选的提醒时间选项
         val REMINDER_OPTIONS = listOf(3, 5, 10)
+
+        // 默认仰角阈值
+        const val DEFAULT_MIN_ELEVATION = 0
     }
 
     /**
@@ -48,6 +51,31 @@ class PassNotificationDataStore(private val context: Context) {
             LogManager.i("PassNotificationDataStore", "设置提醒时间: ${minutes}分钟")
         } catch (e: Exception) {
             LogManager.e("PassNotificationDataStore", "设置提醒时间失败", e)
+        }
+    }
+
+    /**
+     * 获取仰角阈值（度）
+     */
+    fun getMinElevation(): Flow<Int> {
+        val key = intPreferencesKey("min_elevation")
+        return context.dataStore.data.map { preferences ->
+            preferences[key] ?: DEFAULT_MIN_ELEVATION
+        }
+    }
+
+    /**
+     * 设置仰角阈值
+     */
+    suspend fun setMinElevation(elevation: Int) {
+        try {
+            val key = intPreferencesKey("min_elevation")
+            context.dataStore.edit { preferences ->
+                preferences[key] = elevation
+            }
+            LogManager.i("PassNotificationDataStore", "设置仰角阈值: ${elevation}°")
+        } catch (e: Exception) {
+            LogManager.e("PassNotificationDataStore", "设置仰角阈值失败", e)
         }
     }
 
