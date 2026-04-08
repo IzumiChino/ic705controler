@@ -15,7 +15,10 @@ import com.bh6aap.ic705Cter.data.api.Transmitter
 import com.bh6aap.ic705Cter.data.database.DatabaseHelper
 import com.bh6aap.ic705Cter.data.database.entity.CustomTransmitterEntity
 import com.bh6aap.ic705Cter.util.LogManager
+import com.bh6aap.ic705Cter.R
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * 转发器编辑弹窗
@@ -28,6 +31,7 @@ fun TransmitterEditDialog(
     onDismiss: () -> Unit,
     onSave: (Transmitter) -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     // 输入状态
@@ -46,7 +50,7 @@ fun TransmitterEditDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "编辑转发器",
+                text = stringResource(R.string.transmitter_edit_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -62,7 +66,7 @@ fun TransmitterEditDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("描述") },
+                    label = { Text(stringResource(R.string.transmitter_edit_description)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
@@ -70,7 +74,7 @@ fun TransmitterEditDialog(
 
                 // 下行频率范围
                 Text(
-                    text = "下行频率 (MHz)",
+                    text = stringResource(R.string.transmitter_edit_downlink_freq),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -84,7 +88,7 @@ fun TransmitterEditDialog(
                             downlinkLow = it.filter { char -> char.isDigit() || char == '.' }
                             errorMessage = null
                         },
-                        label = { Text("下限") },
+                        label = { Text(stringResource(R.string.transmitter_edit_low)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
@@ -96,7 +100,7 @@ fun TransmitterEditDialog(
                             downlinkHigh = it.filter { char -> char.isDigit() || char == '.' }
                             errorMessage = null
                         },
-                        label = { Text("上限") },
+                        label = { Text(stringResource(R.string.transmitter_edit_high)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
@@ -106,7 +110,7 @@ fun TransmitterEditDialog(
 
                 // 上行频率范围
                 Text(
-                    text = "上行频率 (MHz)",
+                    text = stringResource(R.string.transmitter_edit_uplink_freq),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -120,7 +124,7 @@ fun TransmitterEditDialog(
                             uplinkLow = it.filter { char -> char.isDigit() || char == '.' }
                             errorMessage = null
                         },
-                        label = { Text("下限") },
+                        label = { Text(stringResource(R.string.transmitter_edit_low)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
@@ -132,7 +136,7 @@ fun TransmitterEditDialog(
                             uplinkHigh = it.filter { char -> char.isDigit() || char == '.' }
                             errorMessage = null
                         },
-                        label = { Text("上限") },
+                        label = { Text(stringResource(R.string.transmitter_edit_high)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
@@ -144,7 +148,7 @@ fun TransmitterEditDialog(
                 OutlinedTextField(
                     value = downlinkMode,
                     onValueChange = { downlinkMode = it.uppercase() },
-                    label = { Text("下行模式 (如: FM, USB, LSB)") },
+                    label = { Text(stringResource(R.string.transmitter_edit_downlink_mode)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
@@ -154,7 +158,7 @@ fun TransmitterEditDialog(
                 OutlinedTextField(
                     value = uplinkMode,
                     onValueChange = { uplinkMode = it.uppercase() },
-                    label = { Text("上行模式 (如: FM, USB, LSB)") },
+                    label = { Text(stringResource(R.string.transmitter_edit_uplink_mode)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
@@ -181,7 +185,7 @@ fun TransmitterEditDialog(
                     val uplinkHighHz = uplinkHigh.toDoubleOrNull()?.let { (it * 1_000_000).toLong() }
 
                     if (description.isBlank()) {
-                        errorMessage = "描述不能为空"
+                        errorMessage = context.getString(R.string.transmitter_edit_error_description)
                         return@Button
                     }
 
@@ -216,18 +220,18 @@ fun TransmitterEditDialog(
                             onSave(updatedTransmitter)
                         } catch (e: Exception) {
                             LogManager.e("SatelliteTracking", "保存转发器自定义数据失败", e)
-                            errorMessage = "保存失败: ${e.message}"
+                            errorMessage = context.getString(R.string.transmitter_edit_save_failed, e.message ?: "")
                         }
                     }
                 },
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("保存")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,

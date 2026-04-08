@@ -2,6 +2,7 @@ package com.bh6aap.ic705Cter.data.time
 
 import android.content.Context
 import android.os.SystemClock
+import com.bh6aap.ic705Cter.util.LogManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -17,13 +18,18 @@ import java.util.Date
 class NtpTimeManager(private val context: Context) {
 
     companion object {
-        // 阿里云 NTP 服务器地址
-        private const val NTP_SERVER = "ntp1.aliyun.com"
+        // 备用 NTP 服务器列表
+        private val NTP_SERVERS = listOf(
+            "ntp1.aliyun.com",
+            "ntp2.aliyun.com",
+            "time.google.com",
+            "time.windows.com"
+        )
         private const val NTP_PORT = 123
         private const val NTP_PACKET_SIZE = 48
         private const val NTP_MODE_CLIENT = 3
         private const val NTP_VERSION = 3
-        private const val NTP_TIMEOUT_MS = 10000L // 10秒超时
+        private const val NTP_TIMEOUT_MS = 5000L // 5秒超时
 
         // 1970年1月1日到1900年1月1日的毫秒数
         private const val OFFSET_1900_TO_1970 = ((365L * 70L) + 17L) * 24L * 60L * 60L * 1000L
@@ -43,41 +49,60 @@ class NtpTimeManager(private val context: Context) {
     )
 
     /**
-     * 同步 NTP 时间
+     * 同步 NTP 时间（尝试多个服务器）
      * @return NtpResult 同步结果
      */
     suspend fun syncTime(): NtpResult = withContext(Dispatchers.IO) {
-        try {
-            val result = withTimeoutOrNull(NTP_TIMEOUT_MS) {
-                requestNtpTime()
-            }
+        val errors = mutableListOf<String>()
 
-            if (result != null) {
-                result
-            } else {
-                NtpResult(
-                    success = false,
-                    errorMessage = "NTP 请求超时"
-                )
+        // 尝试多个 NTP 服务器
+        for (server in NTP_SERVERS) {
+            try {
+                val result = withTimeoutOrNull(NTP_TIMEOUT_MS) {
+                    requestNtpTime(server)
+                }
+
+                if (result != null && result.success) {
+                    LogManager.i("NtpTimeManager", "NTP同步成功: $server")
+                    return@withContext result
+                } else if (result != null) {
+                    errors.add("$server: ${result.errorMessage}")
+                } else {
+                    errors.add("$server: 超时")
+                }
+            } catch (e: Exception) {
+                errors.add("$server: ${e.javaClass.simpleName} - ${e.message}")
             }
-        } catch (e: Exception) {
-            NtpResult(
-                success = false,
-                errorMessage = "NTP 同步失败: ${e.message}"
-            )
         }
+
+        // 所有服务器都失败
+        val errorMsg = "所有NTP服务器同步失败: ${errors.joinToString(", ")}"
+        LogManager.e("NtpTimeManager", errorMsg)
+        NtpResult(
+            success = false,
+            errorMessage = errorMsg
+        )
     }
 
     /**
      * 请求 NTP 时间
+     * @param server NTP服务器地址
      */
-    private fun requestNtpTime(): NtpResult {
-        val socket = DatagramSocket().apply {
-            soTimeout = 5000 // 5秒超时
-        }
-
+    private fun requestNtpTime(server: String): NtpResult {
+        var socket: DatagramSocket? = null
         return try {
-            val address = InetAddress.getByName(NTP_SERVER)
+            socket = DatagramSocket().apply {
+                soTimeout = 3000 // 3秒超时
+            }
+
+            val address = try {
+                InetAddress.getByName(server)
+            } catch (e: Exception) {
+                return NtpResult(
+                    success = false,
+                    errorMessage = "DNS解析失败: ${e.message}"
+                )
+            }
 
             // 构建 NTP 请求包
             val buffer = ByteArray(NTP_PACKET_SIZE).apply {
@@ -122,8 +147,13 @@ class NtpTimeManager(private val context: Context) {
                 roundTripDelay = roundTripDelay
             )
 
+        } catch (e: Exception) {
+            NtpResult(
+                success = false,
+                errorMessage = "${e.javaClass.simpleName}: ${e.message}"
+            )
         } finally {
-            socket.close()
+            socket?.close()
         }
     }
 
@@ -172,7 +202,6 @@ class NtpTimeManager(private val context: Context) {
             val systemDate = Date(result.systemTime)
 
             buildString {
-                append("NTP 服务器: $NTP_SERVER\n")
                 append("NTP 时间: ${ntpDate}\n")
                 append("系统时间: ${systemDate}\n")
                 append("时间偏移: ${result.offset} ms\n")
@@ -203,31 +232,56 @@ class NtpTimeManager(private val context: Context) {
     // 缓存的NTP结果
     private var cachedResult: NtpResult? = null
     private var lastSyncTime: Long = 0
+    private var lastSyncAttemptTime: Long = 0
     private val CACHE_VALIDITY_MS = 5 * 60 * 1000L // 缓存5分钟
+    private val SYNC_RETRY_INTERVAL_MS = 60 * 1000L // 同步失败重试间隔1分钟
 
     /**
      * 获取缓存的精确时间（如果缓存有效则使用缓存，否则重新同步）
+     * 注意：即使NTP同步失败，如果有历史缓存仍使用缓存，避免时间基准突变
      */
     suspend fun getCachedAccurateTime(): Long = withContext(Dispatchers.IO) {
         val currentTime = System.currentTimeMillis()
-        
-        // 检查缓存是否有效
-        if (cachedResult?.success == true && 
+
+        // 检查缓存是否有效（5分钟内）
+        if (cachedResult?.success == true &&
             cachedResult?.ntpTime != null &&
             (currentTime - lastSyncTime) < CACHE_VALIDITY_MS) {
             // 使用缓存
             val elapsedSinceSync = SystemClock.elapsedRealtime() - cachedResult!!.elapsedRealtime
             cachedResult!!.ntpTime!! + elapsedSinceSync
         } else {
-            // 重新同步
-            val result = syncTime()
-            if (result.success && result.ntpTime != null) {
-                cachedResult = result
-                lastSyncTime = currentTime
-                val elapsedSinceSync = SystemClock.elapsedRealtime() - result.elapsedRealtime
-                result.ntpTime + elapsedSinceSync
+            // 缓存过期，检查是否需要尝试同步（避免频繁尝试）
+            val shouldAttemptSync = (currentTime - lastSyncAttemptTime) >= SYNC_RETRY_INTERVAL_MS
+
+            if (shouldAttemptSync) {
+                lastSyncAttemptTime = currentTime
+                // 尝试重新同步
+                val result = syncTime()
+                if (result.success && result.ntpTime != null) {
+                    // 同步成功，更新缓存
+                    cachedResult = result
+                    lastSyncTime = currentTime
+                    val elapsedSinceSync = SystemClock.elapsedRealtime() - result.elapsedRealtime
+                    result.ntpTime + elapsedSinceSync
+                } else if (cachedResult?.success == true && cachedResult?.ntpTime != null) {
+                    // 同步失败，但有过期缓存，仍使用过期缓存（避免时间基准突变）
+                    LogManager.w("NtpTimeManager", "NTP同步失败，使用过期缓存时间")
+                    val elapsedSinceSync = SystemClock.elapsedRealtime() - cachedResult!!.elapsedRealtime
+                    cachedResult!!.ntpTime!! + elapsedSinceSync
+                } else {
+                    // 无缓存且同步失败，回退到系统时间
+                    LogManager.w("NtpTimeManager", "NTP同步失败且无缓存，使用系统时间")
+                    System.currentTimeMillis()
+                }
             } else {
-                System.currentTimeMillis()
+                // 距离上次尝试同步不足1分钟，直接使用过期缓存（不打印日志）
+                if (cachedResult?.success == true && cachedResult?.ntpTime != null) {
+                    val elapsedSinceSync = SystemClock.elapsedRealtime() - cachedResult!!.elapsedRealtime
+                    cachedResult!!.ntpTime!! + elapsedSinceSync
+                } else {
+                    System.currentTimeMillis()
+                }
             }
         }
     }

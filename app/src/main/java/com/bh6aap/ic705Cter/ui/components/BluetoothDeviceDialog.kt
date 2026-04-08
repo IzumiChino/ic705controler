@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import com.bh6aap.ic705Cter.data.radio.BluetoothDevicePreference
+import androidx.compose.ui.res.stringResource
+import com.bh6aap.ic705Cter.R
 
 /**
  * 蓝牙设备选择弹窗
@@ -108,13 +110,13 @@ fun BluetoothDeviceDialog(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "设置默认设备",
+                                text = stringResource(R.string.bluetooth_device_title),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                         TextButton(onClick = onDismiss) {
-                            Text("完成")
+                            Text(stringResource(R.string.bluetooth_device_done))
                         }
                     }
 
@@ -129,7 +131,7 @@ fun BluetoothDeviceDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "需要蓝牙权限",
+                                text = stringResource(R.string.bluetooth_permission_required),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -142,7 +144,7 @@ fun BluetoothDeviceDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "暂无已配对的蓝牙设备",
+                                text = stringResource(R.string.bluetooth_no_paired_devices),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -193,9 +195,9 @@ fun BluetoothDeviceDialogItem(
                 Manifest.permission.BLUETOOTH_CONNECT
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            device.name ?: "未知设备"
+            device.name ?: context.getString(R.string.bluetooth_device_unknown)
         } else {
-            "未知设备"
+            context.getString(R.string.bluetooth_device_unknown)
         }
     }
     val deviceAddress = device.address
@@ -291,7 +293,7 @@ fun BluetoothDeviceDialogItem(
                         color = MaterialTheme.colorScheme.primary
                     ) {
                         Text(
-                            text = "默认",
+                            text = stringResource(R.string.bluetooth_device_default_label),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimary,
@@ -307,7 +309,7 @@ fun BluetoothDeviceDialogItem(
                         color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Text(
-                            text = "ICOM",
+                            text = stringResource(R.string.bluetooth_device_icom_label),
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,

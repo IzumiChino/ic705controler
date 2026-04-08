@@ -2,7 +2,6 @@ package com.bh6aap.ic705Cter
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
@@ -27,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,6 +43,7 @@ import com.bh6aap.ic705Cter.data.location.LocationData
 import com.bh6aap.ic705Cter.data.time.NtpTimeManager
 import com.bh6aap.ic705Cter.ui.theme.Ic705controlerTheme
 import com.bh6aap.ic705Cter.util.LogManager
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -57,7 +58,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-class SplashActivity : ComponentActivity() {
+class SplashActivity : BaseActivity() {
 
     private lateinit var permissionManager: PermissionManager
     private lateinit var gpsManager: GpsManager
@@ -65,7 +66,7 @@ class SplashActivity : ComponentActivity() {
 
     // 用于UI状态同步的状态
     private var currentStepState = mutableStateOf(InitStep.PERMISSION_CHECK)
-    private var stepMessageState = mutableStateOf("检查权限...")
+    private var stepMessageState = mutableStateOf("")
 
     companion object {
         private const val TAG = "SplashActivity"
@@ -142,14 +143,14 @@ class SplashActivity : ComponentActivity() {
             LogManager.i(LogManager.TAG_SPLASH, "【初始化开始】============================")
 
             // 1. 检查权限
-            updateStep(InitStep.PERMISSION_CHECK, "正在检查应用权限...")
+            updateStep(InitStep.PERMISSION_CHECK, getString(R.string.splash_permission_checking))
             LogManager.stepStart(LogManager.TAG_PERMISSION, "检查应用权限")
             val hasPermissions = permissionManager.hasAllPermissions()
             LogManager.permissionStatus(LogManager.TAG_PERMISSION, "所有必要权限", hasPermissions)
 
             if (!hasPermissions) {
                 LogManager.w(LogManager.TAG_PERMISSION, "【权限不足】等待用户授予权限")
-                updateStep(InitStep.PERMISSION_CHECK, "需要授予权限才能继续")
+                updateStep(InitStep.PERMISSION_CHECK, getString(R.string.splash_permission_required))
                 return@launch
             }
             LogManager.stepComplete(LogManager.TAG_PERMISSION, "权限检查")
@@ -160,7 +161,7 @@ class SplashActivity : ComponentActivity() {
             
             // 仅在首次运行时请求电池策略
             if (isFirstRun) {
-                updateStep(InitStep.PERMISSION_CHECK, "请求忽略电池优化...")
+                updateStep(InitStep.PERMISSION_CHECK, getString(R.string.splash_battery_optimization))
                 LogManager.stepStart(LogManager.TAG_PERMISSION, "请求忽略电池优化")
                 requestIgnoreBatteryOptimizations()
                 // 添加延迟，确保用户有时间返回应用
@@ -175,7 +176,7 @@ class SplashActivity : ComponentActivity() {
             }
 
             // ========== 步骤1: NTP时间同步 ==========
-            updateStep(InitStep.NTP_SYNC, "正在同步网络时间(NTP)...")
+            updateStep(InitStep.NTP_SYNC, getString(R.string.splash_ntp_syncing))
             LogManager.i(LogManager.TAG_SPLASH, "【步骤1/3】开始NTP时间同步")
             val ntpSuccess = performNtpSync()
             if (!ntpSuccess) {
@@ -185,7 +186,7 @@ class SplashActivity : ComponentActivity() {
             LogManager.i(LogManager.TAG_SPLASH, "【步骤1/3】NTP时间同步完成")
 
             // ========== 步骤2: GPS位置获取（GPS与GMS同步进行）==========
-            updateStep(InitStep.GPS_LOCATION, "正在获取位置信息...")
+            updateStep(InitStep.GPS_LOCATION, getString(R.string.splash_gps_locating))
             LogManager.i(LogManager.TAG_SPLASH, "【步骤2/5】开始GPS位置获取（GPS与网络同步）")
             val locationData = getLocationParallel()
 
@@ -204,17 +205,17 @@ class SplashActivity : ComponentActivity() {
                 }
                 if (hasStationData) {
                     LogManager.i(LogManager.TAG_GPS, "【GPS失败】使用现有地面站数据继续")
-                    updateStep(InitStep.GPS_LOCATION, "使用现有地面站数据...")
+                    updateStep(InitStep.GPS_LOCATION, getString(R.string.splash_gps_using_existing))
                 } else {
                     LogManager.w(LogManager.TAG_GPS, "【GPS失败】无法获取位置且无历史数据，跳过GPS步骤继续初始化")
-                    updateStep(InitStep.GPS_LOCATION, "位置获取失败，跳过...")
+                    updateStep(InitStep.GPS_LOCATION, getString(R.string.splash_gps_failed))
                 }
                 delay(500)
                 // 无论是否有历史数据，都继续后续初始化步骤
             }
 
             // ========== 步骤3: TLE卫星数据（从API获取，不使用内置数据）==========
-            updateStep(InitStep.SATELLITE_INFO_SYNC, "正在同步卫星数据(TLE)...")
+            updateStep(InitStep.SATELLITE_INFO_SYNC, getString(R.string.splash_satellite_syncing))
             LogManager.i(LogManager.TAG_SPLASH, "【步骤3/5】开始TLE卫星数据获取")
             val tleSuccess = performTleSync()
             if (!tleSuccess) {
@@ -223,7 +224,7 @@ class SplashActivity : ComponentActivity() {
             LogManager.i(LogManager.TAG_SPLASH, "【步骤3/5】TLE卫星数据获取完成")
 
             // ========== 步骤4: 加载转发器数据（优先使用内置数据）==========
-            updateStep(InitStep.TLE_SYNC, "正在加载转发器数据...")
+            updateStep(InitStep.TLE_SYNC, getString(R.string.splash_transmitter_loading))
             LogManager.i(LogManager.TAG_SPLASH, "【步骤4/5】开始加载转发器数据")
             val transmitterDataSuccess = loadBuiltinTransmitterData()
             if (!transmitterDataSuccess) {
@@ -237,13 +238,13 @@ class SplashActivity : ComponentActivity() {
             LogManager.i(LogManager.TAG_SPLASH, "【步骤4/5】转发器数据加载完成")
 
             // ========== 步骤5: 初始化 Orekit ==========
-            updateStep(InitStep.OREKIT_INIT, "正在初始化卫星轨道计算库...")
+            updateStep(InitStep.OREKIT_INIT, getString(R.string.splash_orekit_init))
             LogManager.i(LogManager.TAG_SPLASH, "【步骤5/5】开始Orekit初始化")
             performOrekitInit()
             LogManager.i(LogManager.TAG_SPLASH, "【步骤5/5】Orekit初始化完成")
 
             // 所有步骤完成，显示完成状态
-            updateStep(InitStep.COMPLETE, "初始化完成，准备进入主界面...")
+            updateStep(InitStep.COMPLETE, getString(R.string.splash_init_complete))
 
             // 延迟确保用户看到完成状态
             LogManager.d(LogManager.TAG_SPLASH, "【UI延迟】显示完成状态 1.5 秒")
@@ -453,7 +454,7 @@ class SplashActivity : ComponentActivity() {
                 if (tleResult == null) {
                     // 超时
                     LogManager.w(LogManager.TAG_TLE, "【TLE超时】10秒内未获取完整数据，跳过")
-                    updateStep(InitStep.TLE_SYNC, "TLE数据获取超时，使用现有数据...")
+                    updateStep(InitStep.TLE_SYNC, getString(R.string.splash_tle_timeout))
                     tleSyncSuccess = false
                 } else {
                     tleSyncSuccess = tleResult
@@ -505,12 +506,12 @@ class SplashActivity : ComponentActivity() {
         LogManager.databaseOperation(LogManager.TAG_DATABASE, "保存地面站位置", "stations")
 
         val station = StationEntity(
-            name = "当前位置",
+            name = getString(R.string.main_current_location),
             latitude = locationData.latitude,
             longitude = locationData.longitude,
             altitude = locationData.altitude,
             isDefault = true,
-            notes = "精度: ${locationData.accuracy}米, 提供者: ${locationData.provider}"
+            notes = getString(R.string.main_gps_location_saved, locationData.accuracy, locationData.provider)
         )
 
         try {
@@ -796,15 +797,16 @@ fun SplashScreen(
     onPermissionsGranted: () -> Unit = {},
     onLoadingComplete: () -> Unit = {}
 ) {
-    var permissionRationaleText by remember { mutableStateOf("正在加载权限信息...") }
+    val context = LocalContext.current
+    var permissionRationaleText by remember { mutableStateOf("") }
     var hasRequestedPermissions by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         permissionRationaleText = permissionManager?.getPermissionRationaleText()
-            ?: "需要以下权限才能正常运行：\n\n" +
-               "• 位置权限 - 获取当前地面站位置\n" +
-               "• 存储权限 - 缓存卫星数据\n" +
-               "• 蓝牙权限 - 连接 IC-705 设备"
+            ?: context.getString(R.string.splash_permission_rationale_title) + "\n\n" +
+               context.getString(R.string.splash_permission_location) + "\n" +
+               context.getString(R.string.splash_permission_storage) + "\n" +
+               context.getString(R.string.splash_permission_bluetooth)
     }
 
     // 监听步骤变化，当完成时跳转
@@ -821,20 +823,20 @@ fun SplashScreen(
     ) {
         Image(
             painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-            contentDescription = "应用 Logo",
+            contentDescription = stringResource(R.string.splash_logo_desc),
             modifier = Modifier.size(240.dp)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "IC-705 卫星控制器",
+            text = stringResource(R.string.splash_app_name),
             style = MaterialTheme.typography.headlineLarge,
             textAlign = TextAlign.Center
         )
 
         Text(
-            text = "卫星轨道计算工具",
+            text = stringResource(R.string.splash_app_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.secondary,
             textAlign = TextAlign.Center,
@@ -881,7 +883,7 @@ fun SplashScreen(
                         },
                         enabled = !hasRequestedPermissions
                     ) {
-                        Text(if (hasRequestedPermissions) "等待权限响应..." else "授予权限")
+                        Text(if (hasRequestedPermissions) stringResource(R.string.splash_permission_waiting) else stringResource(R.string.splash_permission_grant))
                     }
                 }
             }
@@ -935,14 +937,15 @@ fun SplashScreen(
 /**
  * 获取步骤进度文本
  */
+@Composable
 private fun getStepProgressText(step: SplashActivity.InitStep): String {
     return when (step) {
-        SplashActivity.InitStep.NTP_SYNC -> "步骤 1/6"
-        SplashActivity.InitStep.GPS_LOCATION -> "步骤 2/6"
-        SplashActivity.InitStep.SATELLITE_INFO_SYNC -> "步骤 3/6"
-        SplashActivity.InitStep.TLE_SYNC -> "步骤 4/6"
-        SplashActivity.InitStep.OREKIT_INIT -> "步骤 5/6"
-        SplashActivity.InitStep.COMPLETE -> "步骤 6/6"
+        SplashActivity.InitStep.NTP_SYNC -> stringResource(R.string.splash_step_progress, 1)
+        SplashActivity.InitStep.GPS_LOCATION -> stringResource(R.string.splash_step_progress, 2)
+        SplashActivity.InitStep.SATELLITE_INFO_SYNC -> stringResource(R.string.splash_step_progress, 3)
+        SplashActivity.InitStep.TLE_SYNC -> stringResource(R.string.splash_step_progress, 4)
+        SplashActivity.InitStep.OREKIT_INIT -> stringResource(R.string.splash_step_progress, 5)
+        SplashActivity.InitStep.COMPLETE -> stringResource(R.string.splash_step_progress, 6)
         else -> ""
     }
 }

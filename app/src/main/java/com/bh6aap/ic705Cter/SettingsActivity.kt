@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
@@ -17,6 +16,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import com.bh6aap.ic705Cter.ui.components.LanguageIcon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,22 +24,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bh6aap.ic705Cter.ui.components.ApiSettingsDialog
 import com.bh6aap.ic705Cter.ui.components.CallsignLibraryEditDialog
 import com.bh6aap.ic705Cter.ui.components.CallsignRecordsDialog
 import com.bh6aap.ic705Cter.ui.components.DataManagementDialog
+import com.bh6aap.ic705Cter.ui.components.LanguageSettingsDialog
 import com.bh6aap.ic705Cter.ui.components.StationSettingsDialog
 import com.bh6aap.ic705Cter.ui.components.WhitelistEditDialog
 import com.bh6aap.ic705Cter.ui.theme.Ic705controlerTheme
 import com.bh6aap.ic705Cter.util.LogManager
 
+
 /**
  * 设置界面 Activity
  * 将设置功能从 MainActivity 中分离出来
  */
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_REFRESH_STATION = "refresh_station"
@@ -87,6 +90,7 @@ private fun SettingsScreen(
     var showDataManagementDialog by remember { mutableStateOf(false) }
     var showStationDialog by remember { mutableStateOf(false) }
     var showApiSettingsDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var needRefreshStation by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -98,7 +102,7 @@ private fun SettingsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = "设置",
+                            text = stringResource(R.string.settings_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -108,7 +112,7 @@ private fun SettingsScreen(
                         IconButton(onClick = { onFinish(needRefreshStation) }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回",
+                                contentDescription = stringResource(R.string.common_back),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -129,8 +133,8 @@ private fun SettingsScreen(
         ) {
             // 设置项列表
             SettingsItem(
-                title = "地面站设置",
-                description = "配置QTH位置和坐标",
+                title = stringResource(R.string.settings_station),
+                description = stringResource(R.string.settings_station_desc),
                 icon = Icons.Default.LocationOn,
                 onClick = {
                     showStationDialog = true
@@ -138,8 +142,8 @@ private fun SettingsScreen(
             )
 
             SettingsItem(
-                title = "卫星白名单",
-                description = "添加/删除/编辑卫星",
+                title = stringResource(R.string.settings_whitelist),
+                description = stringResource(R.string.settings_whitelist_desc),
                 icon = Icons.Default.List,
                 onClick = {
                     showWhitelistDialog = true
@@ -147,8 +151,8 @@ private fun SettingsScreen(
             )
 
             SettingsItem(
-                title = "呼号模糊识别库",
-                description = "管理呼号库，添加/删除呼号",
+                title = stringResource(R.string.settings_callsign_library),
+                description = stringResource(R.string.settings_callsign_library_desc),
                 icon = Icons.Default.Person,
                 onClick = {
                     showCallsignLibraryDialog = true
@@ -157,8 +161,8 @@ private fun SettingsScreen(
 
             // 数据管理入口
             SettingsItem(
-                title = "数据管理",
-                description = "导出/导入用户数据（呼号、预设、自定义转发器等）",
+                title = stringResource(R.string.settings_data_management),
+                description = stringResource(R.string.settings_data_management_desc),
                 icon = Icons.Default.Menu,
                 onClick = {
                     showDataManagementDialog = true
@@ -167,8 +171,8 @@ private fun SettingsScreen(
 
             // 呼号记录入口
             SettingsItem(
-                title = "呼号记录",
-                description = "查看和编辑卫星跟踪时的呼号记录",
+                title = stringResource(R.string.settings_callsign_records),
+                description = stringResource(R.string.settings_callsign_records_desc),
                 icon = Icons.Default.List,
                 onClick = {
                     showCallsignRecordsDialog = true
@@ -177,11 +181,26 @@ private fun SettingsScreen(
 
             // API设置入口
             SettingsItem(
-                title = "API设置",
-                description = "配置自定义卫星数据API地址",
+                title = stringResource(R.string.settings_api),
+                description = stringResource(R.string.settings_api_desc),
                 icon = Icons.Default.Settings,
                 onClick = {
                     showApiSettingsDialog = true
+                }
+            )
+
+            // 语言设置入口
+            SettingsItemWithCustomIcon(
+                title = stringResource(R.string.settings_language),
+                description = stringResource(R.string.settings_language_desc),
+                iconContent = {
+                    LanguageIcon(
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                onClick = {
+                    showLanguageDialog = true
                 }
             )
 
@@ -195,7 +214,7 @@ private fun SettingsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Designed by BH6AAP",
+                    text = stringResource(R.string.settings_designer),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -209,7 +228,7 @@ private fun SettingsScreen(
             onDismiss = { showStationDialog = false },
             onStationSaved = {
                 needRefreshStation = true
-                Toast.makeText(context, "地面站已更新", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.settings_station_saved), Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -247,8 +266,15 @@ private fun SettingsScreen(
         ApiSettingsDialog(
             onDismiss = { showApiSettingsDialog = false },
             onApiSaved = {
-                Toast.makeText(context, "API设置已保存", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.settings_api_saved), Toast.LENGTH_SHORT).show()
             }
+        )
+    }
+
+    // 语言设置对话框
+    if (showLanguageDialog) {
+        LanguageSettingsDialog(
+            onDismiss = { showLanguageDialog = false }
         )
     }
 }
@@ -288,6 +314,74 @@ private fun SettingsItem(
                         .size(24.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
+            }
+
+            // 文字内容
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+
+            // 箭头图标
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(20.dp)
+                    .rotate(180f),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsItemWithCustomIcon(
+    title: String,
+    description: String,
+    iconContent: @Composable () -> Unit,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 图标
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    iconContent()
+                }
             }
 
             // 文字内容

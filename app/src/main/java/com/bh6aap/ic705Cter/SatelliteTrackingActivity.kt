@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import java.util.Locale
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
@@ -69,6 +68,8 @@ import com.bh6aap.ic705Cter.util.LogManager
 import com.bh6aap.ic705Cter.util.toFrequencyString
 import com.bh6aap.ic705Cter.util.MaidenheadConverter
 import com.bh6aap.ic705Cter.util.formatFrequencyWithoutUnit
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -81,7 +82,7 @@ private const val MAX_HISTORY_ITEMS = 5
  * 卫星跟踪Activity
  * 显示雷达图，实时跟踪卫星位置
  */
-class SatelliteTrackingActivity : ComponentActivity() {
+class SatelliteTrackingActivity : BaseActivity() {
 
     private lateinit var sensorManager: SensorFusionManager
     private lateinit var satelliteTracker: SatelliteTracker
@@ -97,9 +98,9 @@ class SatelliteTrackingActivity : ComponentActivity() {
         satelliteTracker = SatelliteTracker.getInstance(this)
         trackingController = SatelliteTrackingController(bluetoothConnectionManager, this)
 
-        // 获取传入的卫星ID（可选，如果传入则高亮显示该卫星）
+        // 获取传入的卫星 ID（可选，如果传入则高亮显示该卫星）
         val targetSatelliteId = intent.getStringExtra(EXTRA_SATELLITE_ID)
-        val targetSatelliteName = intent.getStringExtra(EXTRA_SATELLITE_NAME) ?: "卫星跟踪"
+        val targetSatelliteName = intent.getStringExtra(EXTRA_SATELLITE_NAME) ?: this.getString(R.string.tracking_title)
         val aosTime = intent.getLongExtra(EXTRA_AOS_TIME, System.currentTimeMillis())
         val losTime = intent.getLongExtra(EXTRA_LOS_TIME, System.currentTimeMillis() + 15 * 60 * 1000)
 
@@ -260,7 +261,7 @@ private fun SatelliteTrackingScreen(
             // 初始化地面站
             val initialized = satelliteTracker.initializeStation()
             if (!initialized) {
-                errorMessage = "地面站初始化失败"
+                errorMessage = context.getString(R.string.tracking_ground_station_init_failed)
                 isLoading = false
                 return@LaunchedEffect
             }
@@ -341,8 +342,8 @@ private fun SatelliteTrackingScreen(
                                 selectedTransmitter = sortedTransmitters.first()
                                 // 设置目标转发器（用于频率显示）
                                 trackingController.setTargetTransmitter(sortedTransmitters.first())
-                                val satType = if (isLinearSatellite) "线性" else "FM"
-                                val transType = if (isLinearTransmitter(sortedTransmitters.first())) "线性" else "FM"
+                                val satType = if (isLinearSatellite) context.getString(R.string.tracking_linear_satellite) else context.getString(R.string.tracking_transmitter_type_fm)
+                                val transType = if (isLinearTransmitter(sortedTransmitters.first())) context.getString(R.string.tracking_linear_satellite) else context.getString(R.string.tracking_transmitter_type_fm)
                                 val hasCustomData = sortedTransmitters.any { customMap[it.uuid] != null }
                                 LogManager.i("SatelliteTracking", "卫星类型: $satType, 加载了 ${sortedTransmitters.size} 个转发器${if (hasCustomData) "（已应用用户自定义数据）" else ""}，默认选择$transType 转发器: ${sortedTransmitters.first().description}")
                             }
@@ -400,7 +401,7 @@ private fun SatelliteTrackingScreen(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
@@ -437,7 +438,7 @@ private fun SatelliteTrackingScreen(
                     onDismissRequest = { showTransmitterDialog = false },
                     title = {
                         Text(
-                            text = "选择转发器",
+                            text = stringResource(R.string.tracking_select_transmitter),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -494,10 +495,10 @@ private fun SatelliteTrackingScreen(
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                                                 )
                                                 // 类型标签
-                                                val typeLabel = getTransmitterTypeLabel(transmitter)
+                                                val typeLabel = getTransmitterTypeLabel(transmitter, LocalContext.current)
                                                 val typeColor = when (typeLabel) {
-                                                    "线性" -> MaterialTheme.colorScheme.primary
-                                                    "FM" -> MaterialTheme.colorScheme.secondary
+                                                    stringResource(R.string.tracking_transmitter_type_linear) -> MaterialTheme.colorScheme.primary
+                                                    stringResource(R.string.tracking_transmitter_type_fm) -> MaterialTheme.colorScheme.secondary
                                                     "CW" -> MaterialTheme.colorScheme.tertiary
                                                     else -> MaterialTheme.colorScheme.outline
                                                 }
@@ -569,7 +570,7 @@ private fun SatelliteTrackingScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Edit,
-                                                contentDescription = "编辑转发器",
+                                                contentDescription = stringResource(R.string.tracking_edit_transmitter),
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -581,7 +582,7 @@ private fun SatelliteTrackingScreen(
                     },
                     confirmButton = {
                         TextButton(onClick = { showTransmitterDialog = false }) {
-                            Text("取消")
+                            Text(stringResource(R.string.tracking_cancel))
                         }
                     },
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -716,11 +717,11 @@ private fun isLinearTransmitter(transmitter: Transmitter): Boolean {
 /**
  * 获取转发器类型标签
  */
-private fun getTransmitterTypeLabel(transmitter: Transmitter): String {
+private fun getTransmitterTypeLabel(transmitter: Transmitter, context: Context? = null): String {
     return when {
         transmitter.downlinkHigh != null && transmitter.downlinkHigh != transmitter.downlinkLow &&
-        transmitter.uplinkHigh != null && transmitter.uplinkHigh != transmitter.uplinkLow -> "线性"
-        transmitter.mode.contains("FM", ignoreCase = true) -> "FM"
+        transmitter.uplinkHigh != null && transmitter.uplinkHigh != transmitter.uplinkLow -> context?.getString(R.string.tracking_transmitter_type_linear) ?: "Linear"
+        transmitter.mode.contains("FM", ignoreCase = true) -> context?.getString(R.string.tracking_transmitter_type_fm) ?: "FM"
         transmitter.mode.contains("CW", ignoreCase = true) -> "CW"
         transmitter.mode.contains("SSB", ignoreCase = true) ||
         transmitter.mode.contains("USB", ignoreCase = true) ||
@@ -810,7 +811,7 @@ private fun FrequencyInputDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "自定义频率",
+                            text = stringResource(R.string.tracking_custom_frequency),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -822,7 +823,7 @@ private fun FrequencyInputDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "关闭",
+                                contentDescription = stringResource(R.string.callsign_library_close),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
@@ -848,7 +849,7 @@ private fun FrequencyInputDialog(
                                 .padding(12.dp)
                         ) {
                             Text(
-                                text = "频率范围",
+                                text = stringResource(R.string.tracking_frequency),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold
@@ -1074,18 +1075,18 @@ private fun FrequencyInputDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "已存预设 (${presets.size}/5)",
+                            text = stringResource(R.string.tracking_saved_presets, presets.size),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // 预设列表UI（支持置顶）
                     Text(
-                        text = "点击置顶按钮将频率设为默认",
+                        text = stringResource(R.string.tracking_pin_to_top_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -1216,7 +1217,7 @@ private fun PresetItem(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "编辑名称",
+                        text = stringResource(R.string.tracking_edit_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -1290,7 +1291,7 @@ private fun PresetItem(
                     color = MaterialTheme.colorScheme.primary
                 ) {
                     Text(
-                        text = "默认",
+                        text = stringResource(R.string.tracking_default),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -1377,7 +1378,7 @@ private fun PresetItem(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
                     Text(
-                        text = "应用",
+                        text = stringResource(R.string.tracking_apply),
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -1533,7 +1534,7 @@ private fun TrackingControlPanel(
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
-                                        text = "自定义",
+                                        text = stringResource(R.string.tracking_custom),
                                         style = buttonTextStyle,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isCustomMode) {
@@ -1543,7 +1544,7 @@ private fun TrackingControlPanel(
                                         }
                                     )
                                     Text(
-                                        text = if (isCustomMode) "开" else "关",
+                                        text = if (isCustomMode) stringResource(R.string.common_on) else stringResource(R.string.common_off),
                                         style = buttonTextStyle,
                                         color = if (isCustomMode) {
                                             MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f)
@@ -1574,13 +1575,13 @@ private fun TrackingControlPanel(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "转发器",
+                                    text = stringResource(R.string.tracking_transmitter_label),
                                     style = buttonTextStyle,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onTertiary
                                 )
                                 Text(
-                                    text = "选择",
+                                    text = stringResource(R.string.tracking_select_label),
                                     style = buttonTextStyle,
                                     color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f)
                                 )
@@ -1709,7 +1710,7 @@ private fun TrackingControlPanel(
                                         }
                                     )
                                     Text(
-                                        text = "模式",
+                                        text = stringResource(R.string.tracking_mode_label),
                                         style = buttonTextStyle,
                                         color = when {
                                             activeModeType == 3 -> MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f)
@@ -1775,7 +1776,7 @@ private fun TrackingControlPanel(
                                         }
                                     )
                                     Text(
-                                        text = "键入",
+                                        text = stringResource(R.string.tracking_key_in),
                                         style = buttonTextStyle,
                                         color = when {
                                             isCwModuleExpanded -> MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.8f)
@@ -2128,7 +2129,7 @@ private fun CwModuleCard(
                                 ) {
                                     if (inputText.isEmpty()) {
                                         Text(
-                                            text = "输入CW消息",
+                                            text = stringResource(R.string.tracking_input_cw_hint),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                         )
@@ -2166,7 +2167,7 @@ private fun CwModuleCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "历史:",
+                            text = stringResource(R.string.tracking_history_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2377,7 +2378,7 @@ private fun EditPresetDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "编辑预设",
+                text = stringResource(R.string.tracking_edit_preset),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -2389,7 +2390,7 @@ private fun EditPresetDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChange,
-                    label = { Text("按钮名称") },
+                    label = { Text(stringResource(R.string.morse_code_preset_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2545,19 +2546,19 @@ private fun DefaultLayout(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "方位角: ${orientation.azimuth.toInt()}°",
+                            text = stringResource(R.string.tracking_azimuth, orientation.azimuth.toInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "俯仰角: ${ - orientation.pitch.toInt()}°",
+                            text = stringResource(R.string.tracking_pitch, -orientation.pitch.toInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (targetSatellitePositions.isNotEmpty()) {
                             val sat = targetSatellitePositions.first()
                             Text(
-                                text = "距离: ${sat.distance.toInt()} km",
+                                text = stringResource(R.string.tracking_distance, sat.distance.toInt()),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -2801,7 +2802,7 @@ private fun SimpleCallsignRecorder(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "呼号记录 (${records.size})",
+                    text = stringResource(R.string.tracking_callsign_records, records.size),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2815,7 +2816,7 @@ private fun SimpleCallsignRecorder(
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                     ) {
                         Text(
-                            text = "清空",
+                            text = stringResource(R.string.tracking_clear),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.error
@@ -3211,19 +3212,19 @@ private fun CompactFrequencyDisplayPanel(
             ) {
                 // 标题
                 Text(
-                    text = "频率显示",
+                    text = stringResource(R.string.tracking_frequency_display),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 // 卫星频率组
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "卫星",
+                        text = stringResource(R.string.tracking_satellite_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -3279,7 +3280,7 @@ private fun CompactFrequencyDisplayPanel(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "电台",
+                        text = stringResource(R.string.tracking_radio_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

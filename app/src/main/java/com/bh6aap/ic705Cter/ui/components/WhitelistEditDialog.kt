@@ -23,8 +23,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.bh6aap.ic705Cter.data.database.DatabaseHelper
 import com.bh6aap.ic705Cter.util.EditableWhitelistManager
 import com.bh6aap.ic705Cter.util.LogManager
+import com.bh6aap.ic705Cter.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 /**
  * 白名单编辑对话框
@@ -78,7 +80,7 @@ fun WhitelistEditDialog(
                 ) {
                     Column {
                         Text(
-                            text = "卫星白名单管理",
+                            text = stringResource(R.string.whitelist_title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         )
@@ -105,11 +107,11 @@ fun WhitelistEditDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
-                                    contentDescription = "重置为默认"
+                                    contentDescription = stringResource(R.string.whitelist_reset_default)
                                 )
                             }
                             Text(
-                                text = "点击重置默认名单",
+                                text = stringResource(R.string.whitelist_reset_default),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -121,7 +123,7 @@ fun WhitelistEditDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "添加卫星"
+                                contentDescription = stringResource(R.string.whitelist_add_satellite)
                             )
                         }
                     }
@@ -143,7 +145,7 @@ fun WhitelistEditDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "白名单为空",
+                            text = stringResource(R.string.whitelist_empty),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -177,7 +179,7 @@ fun WhitelistEditDialog(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("关闭")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         }
@@ -243,13 +245,13 @@ private fun WhitelistItem(
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
                 Text(
-                    text = "NORAD ID: ${entry.noradId} | 类型: ${if (entry.type == EditableWhitelistManager.SatelliteType.FM) "FM" else "线性"}",
+                    text = stringResource(R.string.whitelist_satellite_info, entry.noradId, if (entry.type == EditableWhitelistManager.SatelliteType.FM) stringResource(R.string.whitelist_satellite_type_fm) else stringResource(R.string.whitelist_satellite_type_linear)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (entry.isCustom) {
                     Text(
-                        text = "自定义",
+                        text = stringResource(R.string.common_custom),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -260,13 +262,13 @@ private fun WhitelistItem(
                 IconButton(onClick = onEdit) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "编辑"
+                        contentDescription = stringResource(R.string.common_edit)
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.common_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -395,7 +397,7 @@ private fun AddEditSatelliteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("添加卫星") },
+        title = { Text(stringResource(R.string.whitelist_add_satellite)) },
         text = {
             Column(
                 modifier = Modifier
@@ -410,9 +412,9 @@ private fun AddEditSatelliteDialog(
                         searchQuery = it
                         selectedResult = null
                     },
-                    label = { Text("搜索卫星 (ID、名称或别名)") },
+                    label = { Text(stringResource(R.string.whitelist_search_hint)) },
                     modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("输入卫星ID、名称或别名进行搜索") },
+                    supportingText = { Text(stringResource(R.string.whitelist_search_supporting)) },
                     trailingIcon = {
                         if (isSearching) {
                             CircularProgressIndicator(
@@ -422,7 +424,7 @@ private fun AddEditSatelliteDialog(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "搜索"
+                                contentDescription = stringResource(R.string.common_search)
                             )
                         }
                     },
@@ -432,7 +434,7 @@ private fun AddEditSatelliteDialog(
                 // 搜索结果列表
                 if (searchResults.isNotEmpty()) {
                     Text(
-                        text = "搜索结果 (${searchResults.size})",
+                        text = stringResource(R.string.whitelist_search_results, searchResults.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -466,7 +468,7 @@ private fun AddEditSatelliteDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "未找到匹配的卫星",
+                            text = stringResource(R.string.whitelist_no_results),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -479,7 +481,7 @@ private fun AddEditSatelliteDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "请输入卫星ID或名称开始搜索",
+                            text = stringResource(R.string.whitelist_search_prompt),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -498,12 +500,19 @@ private fun AddEditSatelliteDialog(
                             modifier = Modifier.padding(12.dp)
                         ) {
                             Text(
-                                text = "已选择: ${result.name}",
+                                text = stringResource(R.string.whitelist_selected, result.name),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                             )
                             Text(
-                                text = "NORAD ID: ${result.noradId} | 类型: ${if (selectedType == EditableWhitelistManager.SatelliteType.FM) "FM" else "线性"}",
+                                text = stringResource(
+                                    R.string.whitelist_satellite_info,
+                                    result.noradId,
+                                    if (selectedType == EditableWhitelistManager.SatelliteType.FM)
+                                        stringResource(R.string.whitelist_satellite_type_fm)
+                                    else
+                                        stringResource(R.string.whitelist_satellite_type_linear)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -521,12 +530,12 @@ private fun AddEditSatelliteDialog(
                 },
                 enabled = selectedResult != null
             ) {
-                Text("添加")
+                Text(stringResource(R.string.common_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )
@@ -546,7 +555,7 @@ private fun EditSatelliteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑卫星") },
+        title = { Text(stringResource(R.string.whitelist_edit_satellite)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -556,7 +565,7 @@ private fun EditSatelliteDialog(
                 OutlinedTextField(
                     value = entry.noradId,
                     onValueChange = { },
-                    label = { Text("NORAD ID") },
+                    label = { Text(stringResource(R.string.whitelist_norad_id)) },
                     enabled = false,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -565,13 +574,13 @@ private fun EditSatelliteDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("卫星名称 *") },
+                    label = { Text(stringResource(R.string.whitelist_satellite_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 // 类型选择
                 Text(
-                    text = "卫星类型",
+                    text = stringResource(R.string.whitelist_satellite_type),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Row(
@@ -581,12 +590,12 @@ private fun EditSatelliteDialog(
                     FilterChip(
                         selected = selectedType == EditableWhitelistManager.SatelliteType.FM,
                         onClick = { selectedType = EditableWhitelistManager.SatelliteType.FM },
-                        label = { Text("FM") }
+                        label = { Text(stringResource(R.string.whitelist_type_fm)) }
                     )
                     FilterChip(
                         selected = selectedType == EditableWhitelistManager.SatelliteType.LINEAR,
                         onClick = { selectedType = EditableWhitelistManager.SatelliteType.LINEAR },
-                        label = { Text("线性") }
+                        label = { Text(stringResource(R.string.whitelist_type_linear)) }
                     )
                 }
             }
@@ -599,12 +608,12 @@ private fun EditSatelliteDialog(
                     }
                 }
             ) {
-                Text("保存")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )
@@ -660,7 +669,7 @@ private fun SatelliteSearchResultItemWithAlias(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "已选择",
+                    contentDescription = stringResource(R.string.whitelist_selected),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )

@@ -17,9 +17,11 @@ import com.bh6aap.ic705Cter.data.database.DatabaseHelper
 import com.bh6aap.ic705Cter.data.database.entity.StationEntity
 import com.bh6aap.ic705Cter.util.LogManager
 import com.bh6aap.ic705Cter.util.MaidenheadConverter
+import com.bh6aap.ic705Cter.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.stringResource
 
 /**
  * 地面站设置对话框
@@ -87,7 +89,7 @@ fun StationSettingsDialog(
                 qthError = null
             }
         } else if (qthLocator.length >= 6) {
-            qthError = "无效的QTH定位符格式"
+            qthError = context.getString(R.string.station_qth_error_invalid)
         } else {
             qthError = null
         }
@@ -116,7 +118,7 @@ fun StationSettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "地面站设置",
+                        text = stringResource(R.string.station_settings_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
@@ -133,7 +135,7 @@ fun StationSettingsDialog(
                     OutlinedTextField(
                         value = stationName,
                         onValueChange = { stationName = it },
-                        label = { Text("地面站名称 *") },
+                        label = { Text(stringResource(R.string.station_name)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -144,10 +146,10 @@ fun StationSettingsDialog(
                         onValueChange = {
                             callsign = it.uppercase()
                         },
-                        label = { Text("呼号 (用于CW预设)") },
+                        label = { Text(stringResource(R.string.station_callsign)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        supportingText = { Text("例如: BA1AA, 用于CW预设中的 <cl> 替换") }
+                        supportingText = { Text(stringResource(R.string.station_callsign_hint)) }
                     )
 
                     // QTH定位符（6位）
@@ -156,7 +158,7 @@ fun StationSettingsDialog(
                         onValueChange = {
                             qthLocator = it.uppercase().take(6)
                         },
-                        label = { Text("QTH定位符 (6位) *") },
+                        label = { Text(stringResource(R.string.station_qth_locator)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         supportingText = {
@@ -166,9 +168,9 @@ fun StationSettingsDialog(
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else if (qthLocator.length == 6) {
-                                Text("格式正确，已自动计算经纬度")
+                                Text(stringResource(R.string.station_qth_valid))
                             } else {
-                                Text("例如: OM89AT")
+                                Text(stringResource(R.string.station_qth_hint))
                             }
                         }
                     )
@@ -177,29 +179,29 @@ fun StationSettingsDialog(
                     OutlinedTextField(
                         value = latitude,
                         onValueChange = { latitude = it },
-                        label = { Text("纬度 (°) *") },
+                        label = { Text(stringResource(R.string.station_latitude)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        supportingText = { Text("范围: -90.0 ~ 90.0") }
+                        supportingText = { Text(stringResource(R.string.station_latitude_range)) }
                     )
 
                     // 经度
                     OutlinedTextField(
                         value = longitude,
                         onValueChange = { longitude = it },
-                        label = { Text("经度 (°) *") },
+                        label = { Text(stringResource(R.string.station_longitude)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        supportingText = { Text("范围: -180.0 ~ 180.0") }
+                        supportingText = { Text(stringResource(R.string.station_longitude_range)) }
                     )
 
                     // 海拔
                     OutlinedTextField(
                         value = altitude,
                         onValueChange = { altitude = it },
-                        label = { Text("海拔 (米)") },
+                        label = { Text(stringResource(R.string.station_altitude)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
@@ -211,7 +213,7 @@ fun StationSettingsDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "保存方式",
+                            text = stringResource(R.string.station_save_mode),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                         )
@@ -229,11 +231,11 @@ fun StationSettingsDialog(
                             )
                             Column(modifier = Modifier.padding(start = 8.dp)) {
                                 Text(
-                                    text = "设为默认地面站",
+                                    text = stringResource(R.string.station_save_as_default),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "替换当前默认地面站，用于卫星跟踪",
+                                    text = stringResource(R.string.station_save_as_default_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -253,11 +255,11 @@ fun StationSettingsDialog(
                             )
                             Column(modifier = Modifier.padding(start = 8.dp)) {
                                 Text(
-                                    text = "添加到地面站库",
+                                    text = stringResource(R.string.station_add_to_library),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "保存到库中，可在主界面长按GPS栏切换",
+                                    text = stringResource(R.string.station_add_to_library_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -283,18 +285,18 @@ fun StationSettingsDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("取消")
+                        Text(stringResource(R.string.common_cancel))
                     }
 
                     Button(
                         onClick = {
                             // 验证输入
                             when {
-                                stationName.isBlank() -> errorMessage = "请输入地面站名称"
-                                qthLocator.length != 6 -> errorMessage = "QTH定位符必须是6位"
-                                !MaidenheadConverter.isValidMaidenhead(qthLocator) -> errorMessage = "QTH定位符格式无效"
-                                latitude.isBlank() -> errorMessage = "请输入纬度"
-                                longitude.isBlank() -> errorMessage = "请输入经度"
+                                stationName.isBlank() -> errorMessage = context.getString(R.string.station_error_name_required)
+                                qthLocator.length != 6 -> errorMessage = context.getString(R.string.station_error_qth_length)
+                                !MaidenheadConverter.isValidMaidenhead(qthLocator) -> errorMessage = context.getString(R.string.station_error_qth_invalid)
+                                latitude.isBlank() -> errorMessage = context.getString(R.string.station_error_latitude_required)
+                                longitude.isBlank() -> errorMessage = context.getString(R.string.station_error_longitude_required)
                                 else -> {
                                     try {
                                         val lat = latitude.toDouble()
@@ -302,11 +304,11 @@ fun StationSettingsDialog(
                                         val alt = altitude.toDoubleOrNull() ?: 0.0
 
                                         if (lat < -90.0 || lat > 90.0) {
-                                            errorMessage = "纬度超出有效范围"
+                                            errorMessage = context.getString(R.string.station_error_latitude_range)
                                             return@Button
                                         }
                                         if (lon < -180.0 || lon > 180.0) {
-                                            errorMessage = "经度超出有效范围"
+                                            errorMessage = context.getString(R.string.station_error_longitude_range)
                                             return@Button
                                         }
 
@@ -315,7 +317,7 @@ fun StationSettingsDialog(
                                             val currentId = currentStation?.id
                                             if (dbHelper.isStationNameExists(stationName, currentId)) {
                                                 withContext(Dispatchers.Main) {
-                                                    errorMessage = "地面站名称 '$stationName' 已被使用，请使用其他名称"
+                                                    errorMessage = context.getString(R.string.station_error_name_exists, stationName)
                                                 }
                                                 return@launch
                                             }
@@ -358,9 +360,9 @@ fun StationSettingsDialog(
 
                                             withContext(Dispatchers.Main) {
                                                 val message = if (saveAsDefault) {
-                                                    "已设为默认地面站"
+                                                    context.getString(R.string.station_saved_default)
                                                 } else {
-                                                    "已添加到地面站库"
+                                                    context.getString(R.string.station_saved_library)
                                                 }
                                                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                                                 onStationSaved()
@@ -368,13 +370,13 @@ fun StationSettingsDialog(
                                             }
                                         }
                                     } catch (e: NumberFormatException) {
-                                        errorMessage = "请输入有效的数字"
+                                        errorMessage = context.getString(R.string.station_error_invalid_number)
                                     }
                                 }
                             }
                         }
                     ) {
-                        Text("保存")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
             }

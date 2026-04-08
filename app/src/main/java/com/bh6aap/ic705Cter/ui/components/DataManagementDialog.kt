@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.bh6aap.ic705Cter.data.UserDataManager
+import com.bh6aap.ic705Cter.R
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 /**
  * 数据管理对话框
@@ -53,7 +55,7 @@ fun DataManagementDialog(
                 isProcessing = true
                 val result = userDataManager.exportUserData(it)
                 isProcessing = false
-                resultMessage = result.getOrElse { "导出失败: ${it.message}" }
+                resultMessage = result.getOrElse { context.getString(R.string.data_export) + context.getString(R.string.common_failed) + ": ${it.message}" }
                 showResult = true
             }
         }
@@ -71,7 +73,7 @@ fun DataManagementDialog(
                     importUri = it
                     showImportConfirm = true
                 } else {
-                    resultMessage = "文件验证失败: ${validationResult.exceptionOrNull()?.message}"
+                    resultMessage = context.getString(R.string.data_import_validation_failed, validationResult.exceptionOrNull()?.message ?: "")
                     showResult = true
                 }
             }
@@ -100,7 +102,7 @@ fun DataManagementDialog(
                         TopAppBar(
                             title = {
                                 Text(
-                                    text = "数据管理",
+                                    text = stringResource(R.string.data_management_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -110,7 +112,7 @@ fun DataManagementDialog(
                                 IconButton(onClick = onDismiss) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "返回",
+                                        contentDescription = stringResource(R.string.common_back),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
@@ -142,13 +144,13 @@ fun DataManagementDialog(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "数据备份与恢复",
+                                text = stringResource(R.string.data_backup_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "导出功能可以将您的所有自定义数据（呼号、地面站、CW预设、频率预设、自定义转发器、备忘录等）保存到文件中。\n\n导入功能可以从备份文件恢复数据，支持合并模式（保留现有数据）或覆盖模式（替换所有数据）。",
+                                text = stringResource(R.string.data_backup_description),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                             )
@@ -157,8 +159,8 @@ fun DataManagementDialog(
 
                     // 导出按钮
                     DataActionCard(
-                        title = "导出数据",
-                        description = "将所有用户数据导出到JSON文件",
+                        title = stringResource(R.string.data_export),
+                        description = stringResource(R.string.data_export_desc),
                         icon = Icons.Default.KeyboardArrowUp,
                         onClick = {
                             val fileName = UserDataManager.generateExportFileName()
@@ -169,8 +171,8 @@ fun DataManagementDialog(
 
                     // 导入按钮
                     DataActionCard(
-                        title = "导入数据",
-                        description = "从JSON文件导入用户数据",
+                        title = stringResource(R.string.data_import),
+                        description = stringResource(R.string.data_import_desc),
                         icon = Icons.Default.KeyboardArrowDown,
                         onClick = {
                             importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
@@ -202,7 +204,7 @@ fun DataManagementDialog(
                     isProcessing = true
                     val result = userDataManager.importUserData(importUri!!, importMode)
                     isProcessing = false
-                    resultMessage = result.getOrElse { "导入失败: ${it.message}" }
+                    resultMessage = result.getOrElse { context.getString(R.string.data_import) + context.getString(R.string.common_failed) + ": ${it.message}" }
                     showResult = true
                 }
             },
@@ -215,6 +217,7 @@ fun DataManagementDialog(
 
     // 结果对话框
     if (showResult && resultMessage != null) {
+        val isError = resultMessage!!.contains(context.getString(R.string.common_failed)) || resultMessage!!.contains(context.getString(R.string.common_error))
         AlertDialog(
             onDismissRequest = {
                 showResult = false
@@ -222,8 +225,8 @@ fun DataManagementDialog(
             },
             title = {
                 Text(
-                    text = if (resultMessage!!.contains("失败") || resultMessage!!.contains("错误")) "操作失败" else "操作成功",
-                    color = if (resultMessage!!.contains("失败") || resultMessage!!.contains("错误")) 
+                    text = if (isError) stringResource(R.string.data_operation_failed) else stringResource(R.string.data_operation_success),
+                    color = if (isError)
                         MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             },
@@ -238,7 +241,7 @@ fun DataManagementDialog(
                     showResult = false
                     resultMessage = null
                 }) {
-                    Text("确定")
+                    Text(stringResource(R.string.common_ok))
                 }
             }
         )
@@ -321,7 +324,7 @@ private fun ImportConfirmDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "导入确认",
+                text = stringResource(R.string.data_import_confirm_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -331,7 +334,7 @@ private fun ImportConfirmDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "请选择导入模式：",
+                    text = stringResource(R.string.data_import_select_mode),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -341,7 +344,7 @@ private fun ImportConfirmDialog(
                         .fillMaxWidth()
                         .clickable { onMergeModeChange(true) },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (mergeMode) MaterialTheme.colorScheme.primaryContainer 
+                    color = if (mergeMode) MaterialTheme.colorScheme.primaryContainer
                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 ) {
                     Row(
@@ -357,12 +360,12 @@ private fun ImportConfirmDialog(
                         )
                         Column {
                             Text(
-                                text = "合并模式",
+                                text = stringResource(R.string.data_import_merge_mode),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "保留现有数据，添加新数据",
+                                text = stringResource(R.string.data_import_merge_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -376,7 +379,7 @@ private fun ImportConfirmDialog(
                         .fillMaxWidth()
                         .clickable { onMergeModeChange(false) },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (!mergeMode) MaterialTheme.colorScheme.primaryContainer 
+                    color = if (!mergeMode) MaterialTheme.colorScheme.primaryContainer
                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 ) {
                     Row(
@@ -392,12 +395,12 @@ private fun ImportConfirmDialog(
                         )
                         Column {
                             Text(
-                                text = "覆盖模式",
+                                text = stringResource(R.string.data_import_overwrite_mode),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "清空现有数据，只保留导入的数据",
+                                text = stringResource(R.string.data_import_overwrite_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -407,7 +410,7 @@ private fun ImportConfirmDialog(
 
                 if (!mergeMode) {
                     Text(
-                        text = "⚠️ 警告：覆盖模式将删除所有现有数据！",
+                        text = stringResource(R.string.data_import_overwrite_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium
@@ -417,12 +420,12 @@ private fun ImportConfirmDialog(
         },
         confirmButton = {
             Button(onClick = onConfirm) {
-                Text("确认导入")
+                Text(stringResource(R.string.data_import_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

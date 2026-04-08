@@ -30,13 +30,15 @@ import com.bh6aap.ic705Cter.data.api.Transmitter
 import com.bh6aap.ic705Cter.tracking.SatelliteTrackingController
 import com.bh6aap.ic705Cter.util.LogManager
 import com.bh6aap.ic705Cter.util.formatFrequencyWithoutUnit
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 /**
- * 频率显示面板组件
- * 左侧显示卫星频率，右侧显示电台频率
- * 支持折叠/展开功能和切换布局
+ * Frequency display panel component
+ * Shows satellite frequency on the left, radio frequency on the right
+ * Supports collapse/expand and layout switching
  */
 @Composable
 fun FrequencyDisplayPanel(
@@ -86,7 +88,7 @@ fun FrequencyDisplayPanel(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 标题栏
+                // Title bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -96,14 +98,14 @@ fun FrequencyDisplayPanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "频率显示",
+                        text = stringResource(R.string.tracking_frequency_display),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "收起" else "展开",
+                        contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
@@ -130,26 +132,26 @@ fun FrequencyDisplayPanel(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                        // 左侧：卫星频率
-                        Column(
+                    // Left: Satellite frequency
+                    Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "卫星频率",
+                                text = stringResource(R.string.tracking_satellite_frequency),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             FrequencyRow(
                                 arrow = "↓",
                                 frequency = formatFrequencyWithoutUnit(frequencyData.satelliteDownlink),
-                                label = "卫星下行",
+                                label = stringResource(R.string.tracking_satellite_label) + " " + stringResource(R.string.tracking_downlink),
                                 arrowColor = MaterialTheme.colorScheme.primary
                             )
                             FrequencyRow(
                                 arrow = "↑",
                                 frequency = formatFrequencyWithoutUnit(frequencyData.satelliteUplink),
-                                label = "卫星上行",
+                                label = stringResource(R.string.tracking_satellite_label) + " " + stringResource(R.string.tracking_uplink),
                                 arrowColor = MaterialTheme.colorScheme.secondary
                             )
                         }
@@ -162,26 +164,26 @@ fun FrequencyDisplayPanel(
                             color = MaterialTheme.colorScheme.outlineVariant
                         )
 
-                        // 右侧：电台频率
+                        // Right: Radio frequency
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "电台频率",
+                                text = stringResource(R.string.tracking_radio_frequency),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             FrequencyRow(
                                 arrow = "↓",
                                 frequency = formatFrequencyWithoutUnit(frequencyData.groundDownlink),
-                                label = "接收频率",
+                                label = stringResource(R.string.tracking_receive_frequency),
                                 arrowColor = MaterialTheme.colorScheme.primary
                             )
                             FrequencyRow(
                                 arrow = "↑",
                                 frequency = formatFrequencyWithoutUnit(frequencyData.groundUplink),
-                                label = "发射频率",
+                                label = stringResource(R.string.tracking_transmit_frequency),
                                 arrowColor = MaterialTheme.colorScheme.secondary
                             )
                         }
@@ -201,7 +203,7 @@ fun FrequencyDisplayPanel(
             ) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowLeft,
-                    contentDescription = "切换布局",
+                    contentDescription = stringResource(R.string.tracking_layout_switch),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier
                         .size(20.dp)

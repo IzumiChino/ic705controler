@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +41,8 @@ import com.bh6aap.ic705Cter.data.radio.BluetoothConnectionManager
 import com.bh6aap.ic705Cter.ui.theme.Ic705controlerTheme
 import com.bh6aap.ic705Cter.util.LogManager
 import com.bh6aap.ic705Cter.util.formatFrequencyWithoutUnit
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -51,7 +52,7 @@ import kotlinx.coroutines.runBlocking
  * 摩尔斯电码Activity
  * 分为上下两层：上层解码，下层发射和编码
  */
-class MorseCodeActivity : ComponentActivity() {
+class MorseCodeActivity : BaseActivity() {
 
     private val bluetoothConnectionManager = BluetoothConnectionManager.getInstance()
 
@@ -212,14 +213,14 @@ private fun MorseCodeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "摩尔斯电码",
+                        text = stringResource(R.string.morse_code_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -262,12 +263,12 @@ private fun MorseCodeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "CW发射",
+                            text = stringResource(R.string.morse_code_cw_transmission),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        
+
                         // 连接状态指示
                         ConnectionStatusIndicator(isConnected = isConnected)
                     }
@@ -468,7 +469,7 @@ private fun FrequencyDisplayCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "当前频率",
+                    text = stringResource(R.string.morse_code_current_frequency),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -476,7 +477,7 @@ private fun FrequencyDisplayCard(
 
                 if (!isConnected) {
                     Text(
-                        text = "未连接",
+                        text = stringResource(R.string.morse_code_not_connected),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -656,7 +657,7 @@ private fun CwModuleCard(
                         ) {
                             if (inputText.isEmpty()) {
                                 Text(
-                                    text = "输入CW消息",
+                                    text = stringResource(R.string.morse_code_input_hint),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -793,7 +794,7 @@ private fun TransmitHistoryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "发射记录 (${history.size})",
+                    text = stringResource(R.string.morse_code_transmit_history, history.size),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -803,7 +804,7 @@ private fun TransmitHistoryCard(
                     modifier = Modifier.height(32.dp)
                 ) {
                     Text(
-                        text = "清空",
+                        text = stringResource(R.string.morse_code_clear_history),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -899,7 +900,7 @@ private fun EditPresetDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "编辑预设",
+                text = stringResource(R.string.morse_code_edit_preset),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )

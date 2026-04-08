@@ -23,12 +23,14 @@ import com.bh6aap.ic705Cter.tracking.TrajectoryPoint
 import kotlin.math.*
 
 import com.bh6aap.ic705Cter.ui.theme.*
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 
 
 /**
- * 卫星雷达图组件（参考look4sat实现）
- * 使用球坐标转笛卡尔坐标，Path绘制轨迹
- * 支持手动旋转微调
+ * Satellite radar view component (inspired by look4sat)
+ * Uses spherical to Cartesian coordinates, Path for trajectory drawing
+ * Supports manual rotation fine-tuning
  */
 @Composable
 fun SatelliteRadarView(
@@ -39,9 +41,9 @@ fun SatelliteRadarView(
     currentTime: Long = System.currentTimeMillis(),
     modifier: Modifier = Modifier,
     onSatelliteClick: ((SatelliteTracker.SatellitePosition) -> Unit)? = null,
-    manualOffset: Float = 0f,  // 手动旋转偏移量（度）
-    onManualOffsetChange: ((Float) -> Unit)? = null,  // 偏移量变化回调
-    enableManualRotate: Boolean = true  // 是否启用手动旋转
+    manualOffset: Float = 0f,  // Manual rotation offset (degrees)
+    onManualOffsetChange: ((Float) -> Unit)? = null,  // Offset change callback
+    enableManualRotate: Boolean = true  // Whether to enable manual rotation
 ) {
     val textMeasurer = rememberTextMeasurer()
     val radarColor = MaterialTheme.colorScheme.secondary
@@ -62,10 +64,10 @@ fun SatelliteRadarView(
         label = "animScale"
     )
 
-    // 累计的手动旋转偏移
+    // Accumulated manual rotation offset
     var accumulatedOffset by remember { mutableFloatStateOf(manualOffset) }
-    
-    // 微调开关状态
+
+    // Fine-tune toggle state
     var isFineTuneEnabled by remember { mutableStateOf(false) }
 
     // 同步外部传入的偏移量
@@ -74,7 +76,7 @@ fun SatelliteRadarView(
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // 左上角微调控制按钮
+        // Fine-tune control button at top-left
         if (enableManualRotate) {
             Box(
                 modifier = Modifier
@@ -126,7 +128,7 @@ fun SatelliteRadarView(
                     }
                 }
                 .pointerInput(enableManualRotate, isFineTuneEnabled) {
-                    // 只有在启用手动旋转且微调开启时才允许拖动
+                    // Only allow dragging when manual rotation and fine-tune are enabled
                     if (!enableManualRotate || !isFineTuneEnabled) return@pointerInput
 
                     var startAngle = 0f
@@ -239,8 +241,8 @@ fun SatelliteRadarView(
 }
 
 /**
- * 微调控制组件（左上角）
- * 样式同右侧方位角/仰角显示
+ * Fine-tune control component (top-left corner)
+ * Same style as the azimuth/elevation display on the right
  */
 @Composable
 private fun FineTuneControl(
@@ -252,14 +254,14 @@ private fun FineTuneControl(
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        // 第一行：微调开关和角度显示分开
+        // First row: fine-tune toggle and angle display separated
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 微调开关
+            // Fine-tune toggle
             Text(
-                text = if (isEnabled) "微调开" else "微调关",
+                text = if (isEnabled) stringResource(R.string.radar_fine_tune_on) else stringResource(R.string.radar_fine_tune_off),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -277,11 +279,11 @@ private fun FineTuneControl(
                 )
             }
         }
-        
-        // 当微调开启时显示重置按钮
+
+        // Show reset button when fine-tune is enabled
         if (isEnabled) {
             Text(
-                text = "重置微调",
+                text = stringResource(R.string.radar_fine_tune_reset),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
@@ -321,7 +323,7 @@ private fun sph2Cart(
 }
 
 /**
- * 绘制雷达网格
+ * Draw radar grid
  */
 private fun DrawScope.drawRadarGrid(
     center: Offset,
@@ -371,7 +373,7 @@ private fun DrawScope.drawRadarGrid(
 }
 
 /**
- * 绘制仰角信息
+ * Draw elevation info
  */
 private fun DrawScope.drawElevationInfo(
     center: Offset,
@@ -393,8 +395,8 @@ private fun DrawScope.drawElevationInfo(
 }
 
 /**
- * 绘制卫星轨迹（使用Path）
- * 包含方向箭头指示卫星运行方向
+ * Draw satellite track (using Path)
+ * Includes direction arrows indicating satellite movement
  */
 private fun DrawScope.drawSatelliteTrack(
     trajectory: List<TrajectoryPoint>,
@@ -533,11 +535,11 @@ private fun DrawScope.drawSatelliteTrack(
 }
 
 /**
- * 绘制方向箭头
- * @param position 箭头位置
- * @param angle 箭头方向（弧度）
- * @param color 箭头颜色
- * @param size 箭头大小
+ * Draw direction arrow
+ * @param position Arrow position
+ * @param angle Arrow direction (radians)
+ * @param color Arrow color
+ * @param size Arrow size
  */
 private fun DrawScope.drawArrow(
     position: Offset,
@@ -573,7 +575,7 @@ private fun DrawScope.drawArrow(
 }
 
 /**
- * 绘制卫星位置
+ * Draw satellite position
  */
 private fun DrawScope.drawSatellitePosition(
     sat: SatelliteTracker.SatellitePosition,
@@ -605,23 +607,23 @@ private fun DrawScope.drawSatellitePosition(
 }
 
 /**
- * 绘制瞄准器（手机指向）
- * 根据俯仰角在雷达图上定位
- * 
- * 雷达图坐标系（平放模式）：
- * - 中心 = 90°仰角（天顶）
- * - 边缘 = 0°仰角（地平线）
- * - 不显示负角度（地平线以下）
- * 
- * 手机传感器坐标系：
- * - 平放（屏幕朝上）：pitch ≈ 0°
- * - 顶部向上倾斜：pitch > 0
- * - 顶部向下倾斜：pitch < 0
- * 
- * 映射关系：
- * - 手机顶部指向天空（pitch = -90°）→ 准星在中心（90°仰角）
- * - 手机平放（pitch = 0°）→ 准星在边缘（0°仰角）
- * - 手机顶部指向地面（pitch = 90°）→ 锁定在边缘
+ * Draw aim indicator (phone pointing direction)
+ * Positioned on radar based on pitch angle
+ *
+ * Radar coordinate system (flat mode):
+ * - Center = 90° elevation (zenith)
+ * - Edge = 0° elevation (horizon)
+ * - Negative angles (below horizon) not displayed
+ *
+ * Phone sensor coordinate system:
+ * - Flat (screen up): pitch ≈ 0°
+ * - Top tilted up: pitch > 0
+ * - Top tilted down: pitch < 0
+ *
+ * Mapping:
+ * - Phone top pointing up (pitch = -90°) → aim at center (90° elevation)
+ * - Phone flat (pitch = 0°) → aim at edge (0° elevation)
+ * - Phone top pointing down (pitch = 90°) → locked at edge
  */
 private fun DrawScope.drawAim(
     elevation: Float,
@@ -671,10 +673,12 @@ private fun DrawScope.drawAim(
 }
 
 /**
- * 卫星信息卡片
+ * Satellite info card
  */
 @Composable
 private fun SatelliteInfoCard(satellite: SatelliteTracker.SatellitePosition) {
+    val azimuthText = stringResource(R.string.radar_azimuth)
+    val elevationText = stringResource(R.string.radar_elevation)
     Column(
         modifier = Modifier.padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -685,7 +689,7 @@ private fun SatelliteInfoCard(satellite: SatelliteTracker.SatellitePosition) {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "方位角: ${satellite.azimuth.toInt()}° | 仰角: ${satellite.elevation.toInt()}°",
+            text = "$azimuthText: ${satellite.azimuth.toInt()}° | $elevationText: ${satellite.elevation.toInt()}°",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )

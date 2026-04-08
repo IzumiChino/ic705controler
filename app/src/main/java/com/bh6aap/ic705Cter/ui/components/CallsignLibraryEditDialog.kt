@@ -43,6 +43,8 @@ import android.content.ContentValues
 import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * 呼号库编辑对话框
@@ -84,11 +86,11 @@ fun CallsignLibraryEditDialog(
                             errorMessage = null
                             android.widget.Toast.makeText(
                                 context,
-                                "成功导入 $importedCount 个呼号",
+                                context.getString(R.string.callsign_library_import_success, importedCount),
                                 android.widget.Toast.LENGTH_LONG
                             ).show()
                         } else if (success) {
-                            errorMessage = "文件中没有找到有效的呼号"
+                            errorMessage = context.getString(R.string.callsign_library_import_empty)
                         } else {
                             errorMessage = message
                         }
@@ -116,7 +118,7 @@ fun CallsignLibraryEditDialog(
             } catch (e: Exception) {
                 LogManager.e("CallsignLibraryEditDialog", "加载呼号库失败", e)
                 withContext(Dispatchers.Main) {
-                    errorMessage = "加载呼号库失败: ${e.message}"
+                    errorMessage = context.getString(R.string.callsign_library_load_failed, e.message ?: "")
                     isLoading = false
                 }
             }
@@ -158,7 +160,7 @@ fun CallsignLibraryEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "呼号模糊识别库",
+                        text = stringResource(R.string.callsign_library_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -166,7 +168,7 @@ fun CallsignLibraryEditDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "关闭",
+                            contentDescription = stringResource(R.string.callsign_library_close),
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -189,7 +191,7 @@ fun CallsignLibraryEditDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "添加呼号",
+                            text = stringResource(R.string.callsign_library_add),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -206,8 +208,8 @@ fun CallsignLibraryEditDialog(
                                     // 只允许输入字母、数字，并自动转为大写
                                     newCallsign = value.filter { it.isLetterOrDigit() }.uppercase()
                                 },
-                                label = { Text("输入呼号") },
-                                placeholder = { Text("例如: BH6AAP") },
+                                label = { Text(stringResource(R.string.callsign_library_input_hint)) },
+                                placeholder = { Text(stringResource(R.string.callsign_library_input_placeholder)) },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(
                                     capitalization = KeyboardCapitalization.Characters,
@@ -258,10 +260,10 @@ fun CallsignLibraryEditDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = "添加"
+                                    contentDescription = stringResource(R.string.common_add)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("保存")
+                                Text(stringResource(R.string.common_save))
                             }
                         }
 
@@ -271,7 +273,7 @@ fun CallsignLibraryEditDialog(
                                 onClick = { newCallsign = "" },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
-                                Text("取消")
+                                Text(stringResource(R.string.common_cancel))
                             }
                         }
                     }
@@ -302,11 +304,11 @@ fun CallsignLibraryEditDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it.uppercase() },
-                    label = { Text("搜索呼号") },
+                    label = { Text(stringResource(R.string.callsign_library_search)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "搜索"
+                            contentDescription = stringResource(R.string.common_search)
                         )
                     },
                     singleLine = true,
@@ -323,23 +325,23 @@ fun CallsignLibraryEditDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "共 ${callsigns.size} 个呼号",
+                        text = stringResource(R.string.callsign_library_count, callsigns.size),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (searchQuery.isNotBlank()) {
                             Text(
-                                text = "匹配: ${filteredCallsigns.size} 个",
+                                text = stringResource(R.string.callsign_library_match_count, filteredCallsigns.size),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
-                        
+
                         // 导出按钮
                         TextButton(
                             onClick = {
@@ -368,7 +370,7 @@ fun CallsignLibraryEditDialog(
                                             }
                                         }
                                     } else {
-                                        errorMessage = "需要存储权限才能导出文件"
+                                        errorMessage = context.getString(R.string.callsign_library_storage_permission)
                                     }
                                 }
                             },
@@ -376,13 +378,13 @@ fun CallsignLibraryEditDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "导出",
+                                contentDescription = stringResource(R.string.callsign_library_export),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("导出TXT")
+                            Text(stringResource(R.string.callsign_library_export))
                         }
-                        
+
                         // 导入按钮
                         TextButton(
                             onClick = {
@@ -393,11 +395,11 @@ fun CallsignLibraryEditDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.List,
-                                contentDescription = "导入",
+                                contentDescription = stringResource(R.string.callsign_library_import),
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("导入")
+                            Text(stringResource(R.string.callsign_library_import))
                         }
 
                         // 一键清空按钮
@@ -411,13 +413,13 @@ fun CallsignLibraryEditDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "清空",
+                                contentDescription = stringResource(R.string.callsign_library_clear),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                "清空",
+                                stringResource(R.string.callsign_library_clear),
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
@@ -444,7 +446,7 @@ fun CallsignLibraryEditDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (searchQuery.isBlank()) "暂无呼号数据" else "未找到匹配的呼号",
+                            text = if (searchQuery.isBlank()) stringResource(R.string.callsign_library_empty) else stringResource(R.string.callsign_library_no_match),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -510,7 +512,7 @@ fun CallsignLibraryEditDialog(
                                 enabled = false
                             )
                             Text(
-                                text = "滑动浏览更多",
+                                text = stringResource(R.string.callsign_library_scroll_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
@@ -525,8 +527,8 @@ fun CallsignLibraryEditDialog(
     showDeleteConfirm?.let { callsignToDelete ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = null },
-            title = { Text("确认删除") },
-            text = { Text("确定要删除呼号 \"$callsignToDelete\" 吗？") },
+            title = { Text(stringResource(R.string.callsign_library_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.callsign_library_delete_confirm_message, callsignToDelete)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -545,12 +547,12 @@ fun CallsignLibraryEditDialog(
                         }
                     }
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -560,8 +562,8 @@ fun CallsignLibraryEditDialog(
     if (showClearAllConfirm) {
         AlertDialog(
             onDismissRequest = { showClearAllConfirm = false },
-            title = { Text("确认清空") },
-            text = { Text("确定要清空所有 ${callsigns.size} 个呼号吗？此操作不可恢复。") },
+            title = { Text(stringResource(R.string.callsign_library_clear_confirm_title)) },
+            text = { Text(stringResource(R.string.callsign_library_clear_confirm_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -575,26 +577,26 @@ fun CallsignLibraryEditDialog(
                                     showClearAllConfirm = false
                                     android.widget.Toast.makeText(
                                         context,
-                                        "已清空所有呼号",
+                                        context.getString(R.string.callsign_library_clear_success),
                                         android.widget.Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             } catch (e: Exception) {
                                 LogManager.e("CallsignLibraryEditDialog", "清空呼号库失败", e)
                                 withContext(Dispatchers.Main) {
-                                    errorMessage = "清空失败: ${e.message}"
+                                    errorMessage = context.getString(R.string.common_failed) + ": ${e.message}"
                                     showClearAllConfirm = false
                                 }
                             }
                         }
                     }
                 ) {
-                    Text("确定", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllConfirm = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -634,7 +636,7 @@ private fun CallsignItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "删除",
+                    contentDescription = stringResource(R.string.common_delete),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp)
                 )
@@ -709,7 +711,7 @@ private suspend fun addCallsign(
 
             // 检查是否已存在
             if (existingCallsigns.contains(callsign)) {
-                callback(false, "呼号 \"$callsign\" 已存在")
+                callback(false, context.getString(R.string.callsign_library_exists, callsign))
                 return@withContext
             }
 
@@ -723,7 +725,7 @@ private suspend fun addCallsign(
             callback(true, null)
         } catch (e: Exception) {
             LogManager.e("CallsignLibraryEditDialog", "添加呼号失败", e)
-            callback(false, "添加失败: ${e.message}")
+            callback(false, context.getString(R.string.callsign_library_add_failed, e.message ?: ""))
         }
     }
 }
@@ -742,7 +744,7 @@ private suspend fun removeCallsign(
 
             // 检查是否存在
             if (!existingCallsigns.contains(callsign)) {
-                callback(false, "呼号 \"$callsign\" 不存在")
+                callback(false, context.getString(R.string.callsign_library_not_exists, callsign))
                 return@withContext
             }
 
@@ -756,7 +758,7 @@ private suspend fun removeCallsign(
             callback(true, null)
         } catch (e: Exception) {
             LogManager.e("CallsignLibraryEditDialog", "删除呼号失败", e)
-            callback(false, "删除失败: ${e.message}")
+            callback(false, context.getString(R.string.callsign_library_delete_failed, e.message ?: ""))
         }
     }
 }
@@ -769,10 +771,10 @@ private suspend fun saveCallsignsToFile(context: Context, callsigns: List<String
         try {
             context.openFileOutput("callsigns_custom.txt", Context.MODE_PRIVATE).use { output ->
                 OutputStreamWriter(output).use { writer ->
-                    writer.write("# 呼号模糊识别库\n")
-                    writer.write("# 每行一个呼号\n")
-                    writer.write("# 更新时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())}\n")
-                    writer.write("# ================================\n")
+                    writer.write(context.getString(R.string.callsign_library_file_header) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_comment) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_updated, java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_separator) + "\n")
                     callsigns.sorted().forEach { callsign ->
                         writer.write("$callsign\n")
                     }
@@ -800,7 +802,7 @@ private suspend fun exportCallsignsToTxt(
             // 生成文件名（带时间戳）
             val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
                 .format(java.util.Date())
-            val fileName = "呼号库_${timestamp}.txt"
+            val fileName = "callsigns_${timestamp}.txt"
             
             val filePath: String
             
@@ -820,10 +822,10 @@ private suspend fun exportCallsignsToTxt(
                 if (uri != null) {
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         OutputStreamWriter(outputStream).use { writer ->
-                            writer.write("# 呼号模糊识别库\n")
-                            writer.write("# 导出时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())}\n")
-                            writer.write("# 呼号数量: ${callsigns.size}\n")
-                            writer.write("# ================================\n\n")
+                            writer.write(context.getString(R.string.callsign_library_file_header) + "\n")
+                            writer.write(context.getString(R.string.callsign_library_file_export_time, java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())) + "\n")
+                            writer.write(context.getString(R.string.callsign_library_file_count, callsigns.size) + "\n")
+                            writer.write(context.getString(R.string.callsign_library_file_separator) + "\n\n")
                             callsigns.sorted().forEach { callsign ->
                                 writer.write("$callsign\n")
                             }
@@ -832,7 +834,7 @@ private suspend fun exportCallsignsToTxt(
                     filePath = uri.toString()
                     LogManager.i("CallsignLibraryEditDialog", "导出呼号库到MediaStore: $filePath")
                 } else {
-                    throw Exception("无法创建文件")
+                    throw Exception("Cannot create file")
                 }
             } else {
                 // Android 9及以下使用传统方式
@@ -842,10 +844,10 @@ private suspend fun exportCallsignsToTxt(
                 val file = File(downloadDir, fileName)
                 
                 file.bufferedWriter().use { writer ->
-                    writer.write("# 呼号模糊识别库\n")
-                    writer.write("# 导出时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())}\n")
-                    writer.write("# 呼号数量: ${callsigns.size}\n")
-                    writer.write("# ================================\n\n")
+                    writer.write(context.getString(R.string.callsign_library_file_header) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_export_time, java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_count, callsigns.size) + "\n")
+                    writer.write(context.getString(R.string.callsign_library_file_separator) + "\n\n")
                     callsigns.sorted().forEach { callsign ->
                         writer.write("$callsign\n")
                     }
@@ -863,10 +865,10 @@ private suspend fun exportCallsignsToTxt(
                 LogManager.i("CallsignLibraryEditDialog", "导出呼号库到: $filePath")
             }
             
-            callback(true, "已导出到Download目录: $fileName")
+            callback(true, context.getString(R.string.callsign_library_export_success, fileName))
         } catch (e: Exception) {
             LogManager.e("CallsignLibraryEditDialog", "导出呼号库失败", e)
-            callback(false, "导出失败: ${e.message}")
+            callback(false, context.getString(R.string.callsign_library_export_failed, e.message ?: ""))
         }
     }
 }
@@ -936,7 +938,7 @@ private suspend fun importCallsignsFromTxt(
             LogManager.i("CallsignLibraryEditDialog", "从文件读取到 ${importedCallsigns.size} 个呼号")
             
             if (importedCallsigns.isEmpty()) {
-                callback(true, "文件中没有找到有效的呼号", 0)
+                callback(true, context.getString(R.string.callsign_library_import_empty), 0)
                 return@withContext
             }
             
@@ -957,11 +959,11 @@ private suspend fun importCallsignsFromTxt(
             
             // 保存到文件
             saveCallsignsToFile(context, existingCallsigns)
-            
-            callback(true, "成功导入 $addedCount 个呼号", addedCount)
+
+            callback(true, context.getString(R.string.callsign_library_import_success, addedCount), addedCount)
         } catch (e: Exception) {
             LogManager.e("CallsignLibraryEditDialog", "导入呼号库失败", e)
-            callback(false, "导入失败: ${e.message}", 0)
+            callback(false, context.getString(R.string.common_failed) + ": ${e.message}", 0)
         }
     }
 }
@@ -1019,7 +1021,7 @@ private suspend fun importCallsignsFromCsv(
             LogManager.i("CallsignLibraryEditDialog", "从CSV读取到 ${importedCallsigns.size} 个唯一呼号")
             
             if (importedCallsigns.isEmpty()) {
-                callback(true, "CSV文件中没有找到有效的呼号", 0)
+                callback(true, context.getString(R.string.callsign_library_import_empty), 0)
                 return@withContext
             }
             
@@ -1040,11 +1042,11 @@ private suspend fun importCallsignsFromCsv(
             
             // 保存到文件
             saveCallsignsToFile(context, existingCallsigns)
-            
-            callback(true, "成功从CSV导入 $addedCount 个呼号", addedCount)
+
+            callback(true, context.getString(R.string.callsign_library_import_csv_success, addedCount), addedCount)
         } catch (e: Exception) {
             LogManager.e("CallsignLibraryEditDialog", "导入CSV失败", e)
-            callback(false, "导入CSV失败: ${e.message}", 0)
+            callback(false, context.getString(R.string.callsign_library_import_csv_failed, e.message ?: ""), 0)
         }
     }
 }

@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import com.bh6aap.ic705Cter.util.LogManager
 import com.bh6aap.ic705Cter.data.radio.BluetoothDevicePreference
+import com.bh6aap.ic705Cter.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * 蓝牙设备连接抽屉
@@ -122,14 +124,14 @@ fun BluetoothDeviceDrawer(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "选择蓝牙设备",
+                                text = stringResource(R.string.bluetooth_drawer_title),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             IconButton(onClick = onDismiss) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "关闭"
+                                    contentDescription = stringResource(R.string.bluetooth_drawer_close)
                                 )
                             }
                         }
@@ -145,7 +147,7 @@ fun BluetoothDeviceDrawer(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "需要蓝牙权限",
+                                    text = stringResource(R.string.bluetooth_drawer_permission_required),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.error
                                 )
@@ -158,7 +160,7 @@ fun BluetoothDeviceDrawer(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "暂无已配对的蓝牙设备",
+                                    text = stringResource(R.string.bluetooth_no_paired_devices),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -208,9 +210,9 @@ fun BluetoothDeviceItem(
                 Manifest.permission.BLUETOOTH_CONNECT
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            device.name ?: "未知设备"
+            device.name ?: context.getString(R.string.bluetooth_device_unknown)
         } else {
-            "未知设备"
+            context.getString(R.string.bluetooth_device_unknown)
         }
     }
     val deviceAddress = device.address
@@ -292,7 +294,7 @@ fun BluetoothDeviceItem(
                     color = MaterialTheme.colorScheme.tertiaryContainer
                 ) {
                     Text(
-                        text = "默认",
+                        text = stringResource(R.string.bluetooth_device_default_label),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -305,7 +307,7 @@ fun BluetoothDeviceItem(
                     modifier = Modifier.padding(start = 4.dp)
                 ) {
                     Text(
-                        text = "设为默认",
+                        text = stringResource(R.string.bluetooth_drawer_set_default),
                         style = MaterialTheme.typography.labelSmall
                     )
                 }
@@ -317,7 +319,7 @@ fun BluetoothDeviceItem(
                         color = MaterialTheme.colorScheme.primary
                     ) {
                     Text(
-                        text = "ICOM",
+                        text = stringResource(R.string.bluetooth_device_icom_label),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimary,

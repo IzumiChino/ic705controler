@@ -3,7 +3,6 @@ package com.bh6aap.ic705Cter
 import android.bluetooth.BluetoothDevice
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
@@ -49,6 +48,7 @@ import com.bh6aap.ic705Cter.notification.PassNotificationManager
 import com.bh6aap.ic705Cter.data.PassNotificationDataStore
 import com.bh6aap.ic705Cter.ui.components.BluetoothDeviceDialog
 import com.bh6aap.ic705Cter.ui.components.StationListDialog
+import com.bh6aap.ic705Cter.R
 import com.bh6aap.ic705Cter.ui.components.getPairedDevices
 import com.bh6aap.ic705Cter.ui.theme.Ic705controlerTheme
 import android.content.Intent
@@ -59,6 +59,7 @@ import com.bh6aap.ic705Cter.util.EditableWhitelistManager
 import com.bh6aap.ic705Cter.util.SatellitePassCalculator
 import com.bh6aap.ic705Cter.util.OptimizedPassCalculator
 import com.bh6aap.ic705Cter.tracking.SatelliteTracker
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -70,7 +71,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity() {
 
     // 蓝牙连接管理器
     private val bluetoothConnectionManager = BluetoothConnectionManager.getInstance()
@@ -142,8 +143,8 @@ class MainActivity : ComponentActivity() {
                 if (showExitDialog) {
                     AlertDialog(
                         onDismissRequest = { showExitDialog = false },
-                        title = { Text("退出应用") },
-                        text = { Text("确定要退出 IC-705 卫星控制器吗？") },
+                        title = { Text(stringResource(R.string.main_exit_title)) },
+                        text = { Text(stringResource(R.string.main_exit_message)) },
                         confirmButton = {
                             TextButton(
                                 onClick = {
@@ -151,22 +152,22 @@ class MainActivity : ComponentActivity() {
                                     finish()
                                 }
                             ) {
-                                Text("确定")
+                                Text(stringResource(R.string.common_ok))
                             }
                         },
                         dismissButton = {
                             TextButton(
                                 onClick = { showExitDialog = false }
                             ) {
-                                Text("取消")
+                                Text(stringResource(R.string.common_cancel))
                             }
                         }
                     )
                 }
                 var isConnecting by remember { mutableStateOf(false) }
                 // 注意：VFO频率和模式不在主界面显示，由SatelliteTrackingActivity管理
-                var tleUpdateTime by remember { mutableStateOf("尚未更新") }
-                var transmitterUpdateTime by remember { mutableStateOf("尚未更新") }
+                var tleUpdateTime by remember { mutableStateOf(getString(R.string.main_tle_not_updated)) }
+                var transmitterUpdateTime by remember { mutableStateOf(getString(R.string.main_tle_not_updated)) }
                 var showSatelliteDialog by remember { mutableStateOf(false) }
                 var refreshStationTrigger by remember { mutableStateOf(0) }
                 var showStationListDialog by remember { mutableStateOf(false) }
@@ -226,7 +227,7 @@ class MainActivity : ComponentActivity() {
                                 // 显示Toast提示
                                 Toast.makeText(
                                     this@MainActivity,
-                                    "正在等待GPS定位……",
+                                    getString(R.string.main_gps_waiting),
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 // 刷新GPS信息
@@ -294,7 +295,7 @@ class MainActivity : ComponentActivity() {
                             val connectedDeviceName by remember {
                                 derivedStateOf {
                                     if (isBtConnected) {
-                                        bluetoothConnectionManager.currentConnector.value?.getConnectedDevice()?.name ?: "未知设备"
+                                        bluetoothConnectionManager.currentConnector.value?.getConnectedDevice()?.name ?: getString(R.string.bluetooth_device_unknown)
                                     } else {
                                         ""
                                     }
@@ -332,9 +333,9 @@ class MainActivity : ComponentActivity() {
                                                                 val success = bluetoothConnectionManager.connectToDevice(defaultDevice)
                                                                 if (success) {
                                                                     lastConnectedDevice = defaultDevice
-                                                                    Toast.makeText(this@MainActivity, "已连接到 ${defaultDevice.name}", Toast.LENGTH_SHORT).show()
+                                                                    Toast.makeText(this@MainActivity, getString(R.string.main_bluetooth_connected_to, defaultDevice.name), Toast.LENGTH_SHORT).show()
                                                                 } else {
-                                                                    Toast.makeText(this@MainActivity, "连接失败，请检查设备", Toast.LENGTH_SHORT).show()
+                                                                    Toast.makeText(this@MainActivity, getString(R.string.main_bluetooth_connection_failed), Toast.LENGTH_SHORT).show()
                                                                 }
                                                             } else {
                                                                 // 找不到默认设备，显示设备列表
@@ -377,16 +378,16 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         Column {
                                             Text(
-                                                text = "蓝牙",
+                                                text = stringResource(R.string.main_bluetooth),
                                                 style = buttonTextStyle,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                             Text(
                                                 text = when {
-                                                    isBtConnected -> "已连接"
-                                                    isConnecting -> "连接中"
-                                                    else -> "未连接"
+                                                    isBtConnected -> stringResource(R.string.main_bluetooth_connected)
+                                                    isConnecting -> stringResource(R.string.main_bluetooth_connecting)
+                                                    else -> stringResource(R.string.main_bluetooth_disconnected)
                                                 },
                                                 style = detailTextStyle,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
@@ -412,7 +413,7 @@ class MainActivity : ComponentActivity() {
                                             val vfoAFreq by bluetoothConnectionManager.vfoAFrequency.collectAsState()
                                             if (vfoAFreq != "-") {
                                                 Text(
-                                                    text = "A: $vfoAFreq MHz",
+                                                    text = stringResource(R.string.main_vfo_a, vfoAFreq),
                                                     style = detailTextStyle,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                                                     maxLines = 1,
@@ -430,7 +431,7 @@ class MainActivity : ComponentActivity() {
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = "长按修改",
+                                                text = stringResource(R.string.main_bluetooth_long_press_modify),
                                                 style = detailTextStyle,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
                                                 maxLines = 1,
@@ -439,7 +440,7 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             // 未连接且无默认设备
                                             Text(
-                                                text = "长按选择设备",
+                                                text = stringResource(R.string.main_bluetooth_long_press_select),
                                                 style = detailTextStyle,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
                                                 maxLines = 1,
@@ -483,7 +484,7 @@ class MainActivity : ComponentActivity() {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "CW",
+                                        text = stringResource(R.string.main_cw_button),
                                         style = buttonTextStyle,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isBtConnected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondary
@@ -511,12 +512,12 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 // TLE时间（点击更新）
                                 Text(
-                                    text = "TLE $tleUpdateTime",
+                                    text = stringResource(R.string.main_tle_time, tleUpdateTime),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.clickable {
                                         LogManager.i(LogManager.TAG_TLE, "【主界面】点击TLE时间戳，开始更新")
-                                        Toast.makeText(this@MainActivity, "正在更新TLE数据...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@MainActivity, getString(R.string.main_tle_updating), Toast.LENGTH_SHORT).show()
                                         lifecycleScope.launch {
                                             val success = tleDataManager.fetchTleData(forceRefresh = true)
                                             if (success) {
@@ -530,13 +531,13 @@ class MainActivity : ComponentActivity() {
                                                             "yyyy/MM/dd-HH:mm:ss",
                                                             java.util.Locale.getDefault()
                                                         ).format(java.util.Date(it.syncTime))
-                                                    } ?: "更新成功"
+                                                    } ?: getString(R.string.common_success)
                                                 }
                                                 tleUpdateTime = lastSyncTime
-                                                Toast.makeText(this@MainActivity, "TLE数据更新成功", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, getString(R.string.main_tle_update_success), Toast.LENGTH_SHORT).show()
                                                 LogManager.i(LogManager.TAG_TLE, "【主界面】TLE更新成功: $tleUpdateTime")
                                             } else {
-                                                Toast.makeText(this@MainActivity, "TLE数据更新失败，请检查网络", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(this@MainActivity, getString(R.string.main_tle_update_failed), Toast.LENGTH_LONG).show()
                                                 LogManager.e(LogManager.TAG_TLE, "【主界面】TLE更新失败")
                                             }
                                         }
@@ -554,13 +555,13 @@ class MainActivity : ComponentActivity() {
                                 )
                                 // ZFQ时间（点击更新）
                                 Text(
-                                    text = "ZFQ $transmitterUpdateTime",
+                                    text = stringResource(R.string.main_transmitter_time, transmitterUpdateTime),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.clickable {
                                         LogManager.i(LogManager.TAG_TLE, "【主界面】点击ZFQ时间戳，开始更新")
-                                        Toast.makeText(this@MainActivity, "正在更新转发器数据...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@MainActivity, getString(R.string.main_transmitter_updating), Toast.LENGTH_SHORT).show()
                                         lifecycleScope.launch {
                                             val success = transmitterDataManager.updateTransmitters()
                                             if (success) {
@@ -568,10 +569,10 @@ class MainActivity : ComponentActivity() {
                                                     transmitterDataManager.getLastUpdateTime()
                                                 }
                                                 transmitterUpdateTime = lastSyncTime
-                                                Toast.makeText(this@MainActivity, "转发器数据更新成功", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, getString(R.string.main_transmitter_update_success), Toast.LENGTH_SHORT).show()
                                                 LogManager.i(LogManager.TAG_TLE, "【主界面】转发器更新成功: $transmitterUpdateTime")
                                             } else {
-                                                Toast.makeText(this@MainActivity, "转发器数据更新失败，请检查网络", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(this@MainActivity, getString(R.string.main_transmitter_update_failed), Toast.LENGTH_LONG).show()
                                                 LogManager.e(LogManager.TAG_TLE, "【主界面】转发器更新失败")
                                             }
                                         }
@@ -599,7 +600,7 @@ class MainActivity : ComponentActivity() {
                         handleBluetoothDeviceSelected(device)
                     },
                     onSetDefaultDevice = { device ->
-                        Toast.makeText(this@MainActivity, "已设置 ${device.name} 为默认设备", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, getString(R.string.bluetooth_device_set_default, device.name), Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -623,7 +624,7 @@ class MainActivity : ComponentActivity() {
                                 selectedStation.longitude,
                                 precision = 8
                             )
-                            Toast.makeText(this@MainActivity, "已切换到: ${selectedStation.name}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MainActivity, getString(R.string.main_switched_to, selectedStation.name), Toast.LENGTH_SHORT).show()
                             LogManager.i("MainActivity", "切换到地面站: ${selectedStation.name}")
                         },
                         currentStationId = stationData?.id
@@ -689,16 +690,16 @@ class MainActivity : ComponentActivity() {
                     }
                     
                     LogManager.i(LogManager.TAG_GPS, "【主界面】GPS信息刷新成功")
-                    Toast.makeText(this@MainActivity, "GPS定位成功", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, getString(R.string.main_gps_success), Toast.LENGTH_SHORT).show()
                     onRefreshComplete(station)
                 } else {
                     LogManager.e(LogManager.TAG_GPS, "【主界面】GPS信息刷新失败: 无法获取位置")
-                    Toast.makeText(this@MainActivity, "GPS定位失败，请检查定位权限或到开阔地带重试", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, getString(R.string.main_gps_failed), Toast.LENGTH_LONG).show()
                     onRefreshComplete(null)
                 }
             } catch (e: Exception) {
                 LogManager.e(LogManager.TAG_GPS, "【主界面】GPS信息刷新失败", e)
-                Toast.makeText(this@MainActivity, "GPS定位异常: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, getString(R.string.main_gps_error, e.message ?: ""), Toast.LENGTH_LONG).show()
                 onRefreshComplete(null)
             }
         }
@@ -763,7 +764,7 @@ class MainActivity : ComponentActivity() {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 this@MainActivity,
-                                "无法获取位置信息，请检查定位服务是否开启",
+                                getString(R.string.error_gps_disabled),
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -786,12 +787,12 @@ class MainActivity : ComponentActivity() {
 
         // 先准备好新的地面站数据
         val station = StationEntity(
-            name = "当前位置",
+            name = getString(R.string.main_current_location),
             latitude = locationData.latitude,
             longitude = locationData.longitude,
             altitude = locationData.altitude,
             isDefault = true,
-            notes = "精度: ${locationData.accuracy}米, 提供者: ${locationData.provider}"
+            notes = getString(R.string.main_gps_location_saved, locationData.accuracy, locationData.provider)
         )
 
         try {
@@ -823,7 +824,7 @@ class MainActivity : ComponentActivity() {
 
 
     private fun handleBluetoothDeviceSelected(device: BluetoothDevice) {
-        val deviceName = device.name ?: "未知设备"
+        val deviceName = device.name ?: getString(R.string.bluetooth_device_unknown)
         val deviceAddress = device.address
         LogManager.i(LogManager.TAG_PERMISSION, "【蓝牙】选择设备: $deviceName ($deviceAddress)")
 
@@ -835,7 +836,7 @@ class MainActivity : ComponentActivity() {
                 bluetoothConnectionManager.disconnect()
             }
             lastConnectedDevice = null
-            Toast.makeText(this, "已断开与 $deviceName 的连接", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.main_bluetooth_disconnected_from, deviceName), Toast.LENGTH_SHORT).show()
         } else {
             // 不同设备，连接新设备
             lifecycleScope.launch {
@@ -844,12 +845,12 @@ class MainActivity : ComponentActivity() {
 
                 if (success) {
                     lastConnectedDevice = device
-                    Toast.makeText(this@MainActivity, "蓝牙连接成功: $deviceName", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, getString(R.string.main_bluetooth_connected_to, deviceName), Toast.LENGTH_SHORT).show()
                     // 注意：移除了连接成功后的VFO查询操作
                     // 避免干扰卫星跟踪的电台控制
                     LogManager.i(LogManager.TAG_PERMISSION, "【蓝牙】连接成功")
                 } else {
-                    Toast.makeText(this@MainActivity, "蓝牙连接失败，请检查设备是否开启", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, getString(R.string.main_bluetooth_connection_error), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -916,7 +917,7 @@ fun GpsInfoBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
-                        contentDescription = "设置",
+                        contentDescription = stringResource(R.string.settings_title),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(iconSize)
                     )
@@ -940,7 +941,7 @@ fun GpsInfoBar(
                 // 左侧：位置图标
                 Icon(
                     imageVector = Icons.Default.LocationOn,
-                    contentDescription = "位置",
+                    contentDescription = stringResource(R.string.main_current_location),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(iconSize)
                 )
@@ -967,7 +968,7 @@ fun GpsInfoBar(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = String.format("海拔: %.0fm", station.altitude),
+                                text = stringResource(R.string.main_altitude, station.altitude),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                                 maxLines = 1,
@@ -997,7 +998,7 @@ fun GpsInfoBar(
                 } else {
                     // 无数据状态
                     Text(
-                        text = "未获取位置",
+                        text = stringResource(R.string.main_gps_no_data),
                         style = dataStyle,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
@@ -1070,10 +1071,10 @@ fun RadioConnectionCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val titleText = when {
-                isConnected -> "已连接到电台"
-                isConnecting -> "正在连接..."
-                defaultDeviceName != null -> "点击连接 $defaultDeviceName"
-                else -> "点击连接你的IC705"
+                isConnected -> stringResource(R.string.main_bluetooth_connected)
+                isConnecting -> stringResource(R.string.main_bluetooth_connecting)
+                defaultDeviceName != null -> stringResource(R.string.main_bluetooth_long_press_select)
+                else -> stringResource(R.string.main_bluetooth_long_press_modify)
             }
             Text(
                 text = titleText,
@@ -1096,9 +1097,9 @@ fun RadioConnectionCard(
             ) {
                 Text(
                     text = when {
-                        isConnected -> "已连接"
-                        isConnecting -> "连接中"
-                        else -> "未连接"
+                        isConnected -> stringResource(R.string.main_bluetooth_connected)
+                        isConnecting -> stringResource(R.string.main_bluetooth_connecting)
+                        else -> stringResource(R.string.main_bluetooth_disconnected)
                     },
                     modifier = Modifier.padding(horizontal = statusHorizontalPadding, vertical = statusVerticalPadding),
                     style = statusStyle,
@@ -1189,7 +1190,7 @@ fun SatelliteListDialog(
         title = {
             Column {
                 Text(
-                    text = "卫星列表",
+                    text = stringResource(R.string.main_satellite_list),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -1212,7 +1213,7 @@ fun SatelliteListDialog(
                 }
             } else if (satellites.isEmpty()) {
                 Text(
-                    text = "暂无卫星数据，请先更新TLE数据",
+                    text = stringResource(R.string.main_satellite_list_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1229,13 +1230,13 @@ fun SatelliteListDialog(
                         // 获取显示名称（优先使用白名单中的名称）
                         val displayName = selectedSatellite?.let { 
                             whitelistNames[it.noradId] ?: it.name 
-                        } ?: "选择卫星"
+                        } ?: stringResource(R.string.main_select_satellite)
                         
                         OutlinedTextField(
                             value = displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("卫星") },
+                            label = { Text(stringResource(R.string.main_satellite_list)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth()
                         )
@@ -1280,7 +1281,7 @@ fun SatelliteListDialog(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "NORAD ID: ${satellite.noradId}",
+                                    text = stringResource(R.string.main_satellite_info_norad_id, satellite.noradId),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1289,15 +1290,15 @@ fun SatelliteListDialog(
 
                                 if (satellitePosition != null) {
                                     val pos = satellitePosition!!
-                                    SatelliteInfoRow("纬度", String.format("%.4f°", pos.latitude))
-                                    SatelliteInfoRow("经度", String.format("%.4f°", pos.longitude))
-                                    SatelliteInfoRow("高度", String.format("%.1f km", pos.altitude))
-                                    SatelliteInfoRow("速度", String.format("%.2f km/s", pos.velocity))
-                                    SatelliteInfoRow("方位角", String.format("%.1f°", pos.azimuth))
-                                    SatelliteInfoRow("仰角", String.format("%.1f°", pos.elevation))
-                                    SatelliteInfoRow("距离", String.format("%.0f km", pos.range))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_latitude), String.format("%.4f°", pos.latitude))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_longitude), String.format("%.4f°", pos.longitude))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_altitude), String.format("%.1f km", pos.altitude))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_velocity), String.format("%.2f km/s", pos.velocity))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_azimuth), String.format("%.1f°", pos.azimuth))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_elevation), String.format("%.1f°", pos.elevation))
+                                    SatelliteInfoRow(stringResource(R.string.main_satellite_info_range), String.format("%.0f km", pos.range))
                                     SatelliteInfoRow(
-                                        "轨道类型",
+                                        stringResource(R.string.main_satellite_info_orbit_type),
                                         SatelliteCalculator.getAltitudeCategory(pos.altitude)
                                     )
                                 } else {
@@ -1316,7 +1317,7 @@ fun SatelliteListDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.common_close))
             }
         }
     )
@@ -1357,11 +1358,14 @@ fun SatellitePassList(
     // 存储每个过境的通知状态
     var notificationStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
-    // 当前时间，用于过滤已结束的过境
+    // NTP时间管理器，用于获取准确时间
+    val ntpTimeManager = remember { com.bh6aap.ic705Cter.data.time.NtpTimeManager(context) }
+    // 当前时间，用于过滤已结束的过境（使用NTP校准时间）
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (isActive) {
-            currentTime = System.currentTimeMillis()
+            // 使用NTP校准时间，与过境计算使用的时间基准一致
+            currentTime = ntpTimeManager.getCachedAccurateTime()
             delay(1000L) // 每秒更新一次
         }
     }
@@ -1380,6 +1384,13 @@ fun SatellitePassList(
     // 同步滑块值与仰角值
     LaunchedEffect(minElevation) {
         sliderValue = minElevation.toFloat()
+    }
+    // 加载保存的仰角阈值
+    LaunchedEffect(Unit) {
+        notificationDataStore.getMinElevation().collect { elevation ->
+            minElevation = elevation.toDouble()
+            LogManager.i("SatellitePassList", "加载仰角阈值: ${elevation}°")
+        }
     }
     // 提醒提前时间（分钟）
     var reminderMinutes by remember { mutableStateOf(PassNotificationDataStore.DEFAULT_REMINDER_MINUTES) }
@@ -1482,7 +1493,7 @@ fun SatellitePassList(
                         enabled = !isLoading
                     ) {
                         Text(
-                            text = if (is24Hours) "24小时过境预报" else "12小时过境预报",
+                            text = if (is24Hours) stringResource(R.string.main_pass_list_title_24h) else stringResource(R.string.main_pass_list_title_12h),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -1498,13 +1509,13 @@ fun SatellitePassList(
                                 strokeWidth = 2.dp
                             )
                             Text(
-                                text = "计算中...",
+                                text = stringResource(R.string.main_pass_list_calculating),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
                             Text(
-                                text = "${passes.size} 个",
+                                text = stringResource(R.string.main_pass_list_count, passes.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1520,7 +1531,7 @@ fun SatellitePassList(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "强制刷新",
+                                contentDescription = stringResource(R.string.common_refresh),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -1534,7 +1545,7 @@ fun SatellitePassList(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "仰角≥",
+                        text = stringResource(R.string.main_pass_list_min_elevation),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1550,6 +1561,10 @@ fun SatellitePassList(
                             if (newElevation != minElevation) {
                                 minElevation = newElevation
                                 LogManager.i("SatellitePassList", "【仰角过滤】设置仰角阈值: ${minElevation}°")
+                                // 保存仰角设置
+                                scope.launch {
+                                    notificationDataStore.setMinElevation(newElevation.toInt())
+                                }
                             }
                         },
                         modifier = Modifier
@@ -1573,7 +1588,7 @@ fun SatellitePassList(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "提醒时间:",
+                        text = stringResource(R.string.main_pass_list_reminder_time),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1593,7 +1608,7 @@ fun SatellitePassList(
                         enabled = !isLoading
                     ) {
                         Text(
-                            text = "提前${reminderMinutes}分钟",
+                            text = stringResource(R.string.main_pass_list_reminder_minutes, reminderMinutes),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary
@@ -1605,7 +1620,7 @@ fun SatellitePassList(
             // 过境列表 - 使用LazyColumn实现滑动，填满剩余空间
             if (passes.isEmpty() && !isLoading) {
                 Text(
-                    text = "未来24小时内无过境",
+                    text = stringResource(R.string.main_pass_list_no_passes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -1833,7 +1848,7 @@ fun PassItem(
                                 color = MaterialTheme.colorScheme.error
                             ) {
                                 Text(
-                                    text = "即将入境",
+                                    text = stringResource(R.string.main_pass_status_upcoming_soon),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
@@ -1847,7 +1862,7 @@ fun PassItem(
                                 color = MaterialTheme.colorScheme.error
                             ) {
                                 Text(
-                                    text = "正在过境",
+                                    text = stringResource(R.string.main_pass_status_in_progress),
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
@@ -1897,16 +1912,16 @@ fun PassItem(
                     secondsUntil >= 3600 -> {
                         val hours = secondsUntil / 3600
                         val minutes = (secondsUntil % 3600) / 60
-                        "还有 ${hours} 时 ${minutes} 分"
+                        stringResource(R.string.main_pass_time_until_hours, hours, minutes)
                     }
-                    secondsUntil >= 300 -> "还有 ${secondsUntil / 60} 分钟" // 5分钟以上显示分钟
-                    secondsUntil >= 60 -> { // 1-5分钟显示分秒
+                    secondsUntil >= 300 -> stringResource(R.string.main_pass_time_until_minutes, secondsUntil / 60)
+                    secondsUntil >= 60 -> { // 1-5 分钟显示分秒
                         val minutes = secondsUntil / 60
                         val seconds = secondsUntil % 60
-                        "还有 ${minutes} 分 ${seconds} 秒"
+                        stringResource(R.string.main_pass_time_until_minutes_seconds, minutes, seconds)
                     }
-                    secondsUntil > 0 -> "还有 ${secondsUntil} 秒" // 1分钟内显示秒
-                    else -> "正在过境"
+                    secondsUntil > 0 -> stringResource(R.string.main_pass_time_until_seconds, secondsUntil)
+                    else -> stringResource(R.string.main_pass_status_in_progress)
                 }
                 Text(
                     text = timeText,

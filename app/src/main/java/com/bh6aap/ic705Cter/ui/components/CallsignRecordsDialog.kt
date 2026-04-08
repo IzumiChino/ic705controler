@@ -27,9 +27,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.bh6aap.ic705Cter.data.CallsignDataStore
 import com.bh6aap.ic705Cter.data.CallsignRecord
+import com.bh6aap.ic705Cter.R
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.res.stringResource
 
 /**
  * 呼号记录对话框
@@ -87,7 +89,7 @@ fun CallsignRecordsDialog(
                         TopAppBar(
                             title = {
                                 Text(
-                                    text = "呼号记录管理",
+                                    text = stringResource(R.string.callsign_records_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -97,7 +99,7 @@ fun CallsignRecordsDialog(
                                 IconButton(onClick = onDismiss) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "返回",
+                                        contentDescription = stringResource(R.string.common_back),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
@@ -109,7 +111,7 @@ fun CallsignRecordsDialog(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Clear,
-                                            contentDescription = "清空记录",
+                                            contentDescription = stringResource(R.string.callsign_records_clear),
                                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
                                     }
@@ -144,12 +146,12 @@ fun CallsignRecordsDialog(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Text(
-                                    text = "暂无呼号记录",
+                                    text = stringResource(R.string.callsign_records_empty),
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "在卫星跟踪时记录的呼号会显示在这里",
+                                    text = stringResource(R.string.callsign_records_empty_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -249,14 +251,14 @@ fun CallsignRecordsDialog(
             onDismissRequest = { showClearConfirm = false },
             title = {
                 Text(
-                    text = "清空所有记录",
+                    text = stringResource(R.string.callsign_records_clear),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "确定要清空所有呼号记录吗？此操作不可恢复。",
+                    text = stringResource(R.string.callsign_records_clear_confirm),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -268,14 +270,14 @@ fun CallsignRecordsDialog(
                     showClearConfirm = false
                 }) {
                     Text(
-                        text = "确定清空",
+                        text = stringResource(R.string.common_ok),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -325,7 +327,7 @@ private fun CallsignRecordCard(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "编辑",
+                        contentDescription = stringResource(R.string.common_edit),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -345,7 +347,7 @@ private fun CallsignRecordCard(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.common_delete),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
                     )
@@ -497,7 +499,7 @@ private fun EditCallsignDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "编辑呼号记录",
+                text = stringResource(R.string.callsign_records_edit),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -511,7 +513,7 @@ private fun EditCallsignDialog(
                     value = editedCallsign,
                     onValueChange = onCallsignChange,
                     label = {
-                        Text("呼号")
+                        Text(stringResource(R.string.callsign_records_callsign))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
@@ -526,7 +528,7 @@ private fun EditCallsignDialog(
                     value = editedSatellite,
                     onValueChange = onSatelliteChange,
                     label = {
-                        Text("卫星名称")
+                        Text(stringResource(R.string.callsign_records_satellite))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -538,7 +540,7 @@ private fun EditCallsignDialog(
                     value = editedUtcTime,
                     onValueChange = onUtcTimeChange,
                     label = {
-                        Text("UTC时间")
+                        Text(stringResource(R.string.callsign_records_time))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -550,7 +552,7 @@ private fun EditCallsignDialog(
                     value = editedFrequency,
                     onValueChange = onFrequencyChange,
                     label = {
-                        Text("频率")
+                        Text(stringResource(R.string.callsign_records_frequency))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -562,7 +564,7 @@ private fun EditCallsignDialog(
                     value = editedMode,
                     onValueChange = onModeChange,
                     label = {
-                        Text("模式")
+                        Text(stringResource(R.string.callsign_records_mode))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -574,7 +576,7 @@ private fun EditCallsignDialog(
                     value = editedGrid,
                     onValueChange = onGridChange,
                     label = {
-                        Text("四位网格")
+                        Text(stringResource(R.string.callsign_records_grid))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -601,16 +603,16 @@ private fun EditCallsignDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "保存",
+                        contentDescription = stringResource(R.string.common_save),
                         modifier = Modifier.size(18.dp)
                     )
-                    Text("保存")
+                    Text(stringResource(R.string.callsign_records_save))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

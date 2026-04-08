@@ -24,6 +24,8 @@ import com.bh6aap.ic705Cter.data.api.TleDataManager
 import com.bh6aap.ic705Cter.data.database.CustomApiDatabaseManager
 import com.bh6aap.ic705Cter.util.LogManager
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.bh6aap.ic705Cter.R
 
 /**
  * API设置对话框
@@ -46,11 +48,11 @@ fun ApiSettingsDialog(
     var testResult by remember { mutableStateOf<TestResult?>(null) }
 
     // 测试单个API
-    fun testSingleApi(url: String, expectedType: ApiTypeValidator.ApiType) {
+    fun testSingleApi(url: String, expectedType: ApiTypeValidator.ApiType, context: Context) {
         if (url.isBlank()) {
             testResult = TestResult(
                 isSuccess = true,
-                message = "使用默认API地址",
+                message = context.getString(R.string.api_test_use_default),
                 details = null
             )
             return
@@ -66,8 +68,8 @@ fun ApiSettingsDialog(
             testResult = TestResult(
                 isSuccess = result.isValid,
                 message = result.message,
-                details = result.sampleData?.let { "返回数据示例: $it" }
-            )
+                details = result.sampleData?.let { context.getString(R.string.api_sample_data, it) }
+                        )
         }
     }
 
@@ -86,7 +88,7 @@ fun ApiSettingsDialog(
                     satelliteApiUrl,
                     ApiTypeValidator.ApiType.SATELLITE
                 )
-                results.add("卫星API: ${result.message}")
+                results.add(context.getString(R.string.api_result_satellite, result.message))
                 if (!result.isValid) allValid = false
             }
 
@@ -96,7 +98,7 @@ fun ApiSettingsDialog(
                     transmitterApiUrl,
                     ApiTypeValidator.ApiType.TRANSMITTER
                 )
-                results.add("转发器API: ${result.message}")
+                results.add(context.getString(R.string.api_result_transmitter, result.message))
                 if (!result.isValid) allValid = false
             }
 
@@ -106,12 +108,12 @@ fun ApiSettingsDialog(
                     tleApiUrl,
                     ApiTypeValidator.ApiType.TLE
                 )
-                results.add("TLE API: ${result.message}")
+                results.add(context.getString(R.string.api_result_tle, result.message))
                 if (!result.isValid) allValid = false
             }
 
             if (results.isEmpty()) {
-                results.add("未配置自定义API，将使用默认地址")
+                results.add(context.getString(R.string.api_result_no_custom))
             }
 
             isTesting = false
@@ -151,7 +153,7 @@ fun ApiSettingsDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "API设置",
+                        text = stringResource(R.string.api_settings_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -159,14 +161,14 @@ fun ApiSettingsDialog(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "关闭",
+                            contentDescription = stringResource(R.string.common_close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
                 Text(
-                    text = "配置自定义API地址，留空则使用默认地址",
+                    text = stringResource(R.string.api_settings_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -175,8 +177,8 @@ fun ApiSettingsDialog(
                 OutlinedTextField(
                     value = satelliteApiUrl,
                     onValueChange = { satelliteApiUrl = it },
-                    label = { Text("卫星数据API") },
-                    placeholder = { Text("https://api.example.com/satellites") },
+                    label = { Text(stringResource(R.string.api_satellite)) },
+                    placeholder = { Text(stringResource(R.string.api_satellite_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -194,8 +196,8 @@ fun ApiSettingsDialog(
                 OutlinedTextField(
                     value = transmitterApiUrl,
                     onValueChange = { transmitterApiUrl = it },
-                    label = { Text("转发器数据API") },
-                    placeholder = { Text("https://api.example.com/transmitters") },
+                    label = { Text(stringResource(R.string.api_transmitter)) },
+                    placeholder = { Text(stringResource(R.string.api_transmitter_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -213,8 +215,8 @@ fun ApiSettingsDialog(
                 OutlinedTextField(
                     value = tleApiUrl,
                     onValueChange = { tleApiUrl = it },
-                    label = { Text("TLE数据API") },
-                    placeholder = { Text("https://api.example.com/tle") },
+                    label = { Text(stringResource(R.string.api_tle)) },
+                    placeholder = { Text(stringResource(R.string.api_tle_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -285,7 +287,7 @@ fun ApiSettingsDialog(
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isTesting) "测试中..." else "测试连接")
+                        Text(if (isTesting) stringResource(R.string.api_testing) else stringResource(R.string.api_test))
                     }
 
                     // 保存按钮
@@ -293,7 +295,7 @@ fun ApiSettingsDialog(
                         onClick = {
                             scope.launch {
                                 isTesting = true
-                                testResult = TestResult(isSuccess = true, message = "正在保存API设置并获取数据...", details = null)
+                                testResult = TestResult(isSuccess = true, message = context.getString(R.string.api_saving), details = null)
 
                                 // 保存API设置
                                 prefs.saveApiUrls(
@@ -306,7 +308,7 @@ fun ApiSettingsDialog(
                                 // 如果设置了自定义TLE API，自动获取数据
                                 val tleUrl = tleApiUrl.trim()
                                 if (tleUrl.isNotBlank()) {
-                                    testResult = TestResult(isSuccess = true, message = "正在从自定义API获取TLE数据...", details = null)
+                                    testResult = TestResult(isSuccess = true, message = context.getString(R.string.api_fetching_custom), details = null)
 
                                     try {
                                         // 初始化自定义数据库
@@ -322,26 +324,26 @@ fun ApiSettingsDialog(
                                         if (success) {
                                             testResult = TestResult(
                                                 isSuccess = true,
-                                                message = "API设置已保存，TLE数据获取成功",
-                                                details = "数据已存储到自定义数据库"
+                                                message = context.getString(R.string.api_save_success),
+                                                details = context.getString(R.string.api_save_success_details)
                                             )
                                         } else {
                                             testResult = TestResult(
                                                 isSuccess = false,
-                                                message = "API设置已保存，但TLE数据获取失败",
-                                                details = "请检查API链接是否正确"
+                                                message = context.getString(R.string.api_save_failed),
+                                                details = context.getString(R.string.api_save_failed_check)
                                             )
                                         }
                                     } catch (e: Exception) {
                                         LogManager.e("ApiSettings", "获取自定义TLE数据失败", e)
                                         testResult = TestResult(
                                             isSuccess = false,
-                                            message = "API设置已保存，但TLE数据获取失败: ${e.message}",
+                                            message = context.getString(R.string.api_save_failed_error, e.message ?: ""),
                                             details = null
                                         )
                                     }
                                 } else {
-                                    testResult = TestResult(isSuccess = true, message = "API设置已保存", details = "使用默认TLE API")
+                                    testResult = TestResult(isSuccess = true, message = context.getString(R.string.api_save_success_default), details = context.getString(R.string.api_save_success_default_details))
                                 }
 
                                 isTesting = false
@@ -361,7 +363,7 @@ fun ApiSettingsDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("保存")
+                        Text(stringResource(R.string.common_save))
                     }
                 }
 
@@ -372,13 +374,13 @@ fun ApiSettingsDialog(
                         transmitterApiUrl = ""
                         tleApiUrl = ""
                         prefs.clearApiUrls()
-                        testResult = TestResult(isSuccess = true, message = "已重置为默认API地址", details = null)
+                        testResult = TestResult(isSuccess = true, message = context.getString(R.string.api_reset_success), details = null)
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        "恢复默认设置",
+                        stringResource(R.string.api_reset_default),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
