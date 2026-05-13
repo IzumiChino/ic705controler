@@ -23,10 +23,11 @@ class SatelliteDataManager(private val context: Context) {
         private const val REQUEST_TIMEOUT_SECONDS = 30L
     }
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .build()
+    private val client = SecureHttp.buildSecureClient(
+        connectTimeoutSec = REQUEST_TIMEOUT_SECONDS,
+        readTimeoutSec = REQUEST_TIMEOUT_SECONDS,
+        callTimeoutSec = REQUEST_TIMEOUT_SECONDS + 5
+    )
 
     private val dbHelper = DatabaseHelper.getInstance(context)
 
@@ -77,8 +78,8 @@ class SatelliteDataManager(private val context: Context) {
                     throw IOException("HTTP ${response.code}")
                 }
 
-                val responseBody = response.body?.string()
-                    ?: throw IOException("Empty response")
+                val responseBody = SecureHttp.readLimitedBody(response)
+                    ?: throw IOException("Empty/oversize response")
 
                 // 解析 JSON 数据
                 val satelliteInfos = parseSatelliteInfo(responseBody)
@@ -104,6 +105,8 @@ class SatelliteDataManager(private val context: Context) {
             }
 
             return@withContext true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             LogManager.e("SatelliteDataManager", "【卫星信息】同步失败: ${e.message}", e)
             return@withContext false
@@ -129,12 +132,14 @@ class SatelliteDataManager(private val context: Context) {
                     throw IOException("HTTP ${response.code}")
                 }
 
-                val responseBody = response.body?.string()
-                    ?: throw IOException("Empty response")
+                val responseBody = SecureHttp.readLimitedBody(response)
+                    ?: throw IOException("Empty/oversize response")
 
                 val satelliteInfos = parseSatelliteInfo(responseBody)
                 satelliteInfos.firstOrNull()
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             LogManager.e("SatelliteDataManager", "【卫星信息】获取单颗卫星失败: $noradId", e)
             null

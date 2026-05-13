@@ -23,10 +23,11 @@ class TransmitterDataManager(private val context: Context) {
     }
     
     private val gson = Gson()
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .build()
+    private val httpClient = SecureHttp.buildSecureClient(
+        connectTimeoutSec = 30L,
+        readTimeoutSec = 30L,
+        callTimeoutSec = 35L
+    )
     
     private val baseApiUrl = "https://db.satnogs.org/api/"
     
@@ -58,43 +59,38 @@ class TransmitterDataManager(private val context: Context) {
                 // 为每个卫星ID获取转发器数据
                 noradIds.forEachIndexed { index, noradId ->
                     LogManager.i("TransmitterDataManager", "处理第 ${index + 1}/${noradIds.size} 个卫星: $noradId")
-                    
+
                     try {
                         // 构建请求URL
                         val apiUrl = "${baseApiUrl}transmitters/?satellite__norad_cat_id=$noradId"
-                        
+
                         // 构建请求
                         val request = Request.Builder()
                             .url(apiUrl)
                             .header("Accept", "application/json")
                             .build()
-                        
-                        // 发送请求
-                        val response = httpClient.newCall(request).execute()
-                        
-                        if (!response.isSuccessful) {
-                            LogManager.e("TransmitterDataManager", "API请求失败: ${response.code} for NORAD ID $noradId")
-                            // 继续处理下一个卫星
-                            return@forEachIndexed
+
+                        httpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) {
+                                LogManager.e("TransmitterDataManager", "API请求失败: ${response.code} for NORAD ID $noradId")
+                                return@forEachIndexed
+                            }
+                            val responseBody = SecureHttp.readLimitedBody(response)
+                            if (responseBody.isNullOrEmpty()) {
+                                LogManager.e("TransmitterDataManager", "响应体为空/超限 for NORAD ID $noradId")
+                                return@forEachIndexed
+                            }
+                            val type = object : TypeToken<List<Transmitter>>() {}.type
+                            val transmitters: List<Transmitter> = gson.fromJson(responseBody, type)
+                            LogManager.i("TransmitterDataManager", "卫星 $noradId 有 ${transmitters.size} 个转发器")
+                            allTransmitters.addAll(transmitters)
                         }
-                        
-                        // 解析响应
-                        val responseBody = response.body?.string()
-                        if (responseBody.isNullOrEmpty()) {
-                            LogManager.e("TransmitterDataManager", "响应体为空 for NORAD ID $noradId")
-                            return@forEachIndexed
-                        }
-                        
-                        // 解析JSON为Transmitter列表
-                        val type = object : TypeToken<List<Transmitter>>() {}.type
-                        val transmitters: List<Transmitter> = gson.fromJson(responseBody, type)
-                        
-                        LogManager.i("TransmitterDataManager", "卫星 $noradId 有 ${transmitters.size} 个转发器")
-                        allTransmitters.addAll(transmitters)
-                        
+
                         // 添加短暂延迟，避免请求过快
                         Thread.sleep(500)
-                        
+
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         LogManager.e("TransmitterDataManager", "处理卫星 $noradId 时出错: ${e.message}")
                         // 继续处理下一个卫星
@@ -117,7 +113,9 @@ class TransmitterDataManager(private val context: Context) {
                 
                 LogManager.i("TransmitterDataManager", "转发器数据更新完成")
                 return@withContext true
-                
+
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LogManager.e("TransmitterDataManager", "更新失败: ${e.message}")
                 e.printStackTrace()
