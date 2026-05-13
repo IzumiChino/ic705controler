@@ -135,6 +135,11 @@ class SatelliteTrackingController(
 
     // 跟踪任务
     private var trackingJob: Job? = null
+    // Doppler 缓存喂入循环。之前只在 SatelliteTrackingActivity 的
+    // LaunchedEffect 里跑，Activity 后台化后 Composition dispose 即停。
+    // 跟踪本职是后台任务，所以让 controller 自己也喂一份；同前台 collector
+    // 双写无害，DopplerDataCache 是单例。
+    private var positionJob: Job? = null
     private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // 模式覆盖（用户手动切换的模式）
@@ -214,14 +219,19 @@ class SatelliteTrackingController(
 
         targetTransmitter = transmitter
         loopFixedValue = loopValue
-        
+
         // 生成唯一的卫星跟踪ID
         currentSatelliteId = System.currentTimeMillis().toString()
         val trackingId = currentSatelliteId
-        
+
         val type = determineSatelliteType(transmitter)
         _satelliteType.value = type
         _isTracking.value = true
+
+        // 启动 Doppler 位置喂入循环。保证 tracking 在 Activity 后台化 /
+        // 锁屏 / 低内存时仍然能更新 DopplerDataCache，updateFrequencies 才
+        // 有新鲜的 rangeRate 可用。
+        startPositionLoop(transmitter)
 
         // 检查是否已经初始化过频率基准值
         val alreadyInitialized = !forceReinit && 
@@ -269,6 +279,7 @@ class SatelliteTrackingController(
      */
     fun stopTracking() {
         trackingJob?.cancel()
+        positionJob?.cancel()
         avoidVfoJob?.cancel()
         userActivityJob?.cancel()
         _isTracking.value = false
@@ -342,6 +353,7 @@ class SatelliteTrackingController(
      */
     fun stopTrackingWithoutReset() {
         trackingJob?.cancel()
+        positionJob?.cancel()
         avoidVfoJob?.cancel()
         userActivityJob?.cancel()
         _isTracking.value = false
@@ -1414,6 +1426,58 @@ class SatelliteTrackingController(
                     updateFrequencies()
                 }
                 delay(FREQUENCY_UPDATE_INTERVAL_MS) // 按 FREQUENCY_UPDATE_INTERVAL_MS 节拍更新
+            }
+        }
+    }
+
+    /**
+     * 在 controllerScope 下周期性推进目标卫星的位置计算，持续喂入
+     * DopplerDataCache；updateFrequencies -> PredictiveDopplerCalculator 才
+     * 能读到新鲜的 rangeRate。
+     *
+     * 原本该循环只在 SatelliteTrackingActivity 的 Composition LaunchedEffect
+     * 里跑；Activity 切到后台后 Composition dispose 就停了，但
+     * controllerScope 仍在跑 trackingJob 继续写 CI-V 频率——用的是停住不动
+     * 的缓存数据，几分钟后频率已经错几 kHz。
+     */
+    private fun startPositionLoop(transmitter: Transmitter) {
+        positionJob?.cancel()
+        val ctx = context ?: run {
+            LogManager.w(TAG, "context 为空，无法启动 Doppler 位置喂入循环")
+            return
+        }
+        // SatNOGS Transmitter 里 satId 是 SatNOGS 的内部 sat_id 字符串，
+        // 而 DatabaseHelper.getSatelliteByNoradId 取的是 NORAD 数字 ID。
+        val noradIdStr = transmitter.noradCatId.toString()
+        positionJob = controllerScope.launch(Dispatchers.IO) {
+            try {
+                val tracker = com.bh6aap.ic705Cter.tracking.SatelliteTracker.getInstance(ctx)
+                val dbHelper = com.bh6aap.ic705Cter.data.database.DatabaseHelper.getInstance(ctx)
+                val sat = dbHelper.getSatelliteByNoradId(noradIdStr)
+                if (sat == null) {
+                    LogManager.w(TAG, "未找到 NORAD $noradIdStr 的 TLE，跳过位置循环")
+                    return@launch
+                }
+                val satellites = listOf(sat)
+                val downlinkFreqHz = transmitter.downlinkLow?.toDouble() ?: 435e6
+                while (isActive && _isTracking.value) {
+                    try {
+                        tracker.calculateMultiplePositions(
+                            satellites = satellites,
+                            targetSatelliteId = noradIdStr,
+                            downlinkFreqHz = downlinkFreqHz
+                        )
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        LogManager.e(TAG, "位置计算异常", e)
+                    }
+                    delay(500L)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LogManager.e(TAG, "位置喂入循环异常退出", e)
             }
         }
     }
