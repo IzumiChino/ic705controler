@@ -66,6 +66,11 @@ class BluetoothConnectionManager private constructor() {
     // VFO状态跟踪
     var currentVfo = "A"
 
+    // Split 模式当前状态（null=未知/未连接, true=ON, false=OFF）。
+    // UI 订阅此 StateFlow 显示开关并反映"手动切 Split"的即时结果。
+    private val _splitMode = MutableStateFlow<Boolean?>(null)
+    val splitMode: StateFlow<Boolean?> = _splitMode.asStateFlow()
+
     // startStateSync 的 collector Job；重连时必须取消旧的，避免多个
     // collector 并发写 _vfoAFrequency 等 StateFlow。
     @Volatile
@@ -232,6 +237,8 @@ class BluetoothConnectionManager private constructor() {
         _vfoAMode.value = "-"
         _vfoBFrequency.value = "-"
         _vfoBMode.value = "-"
+        // Split 状态也必须回到未知，否则断线后 UI 还显示上一连接的开/关
+        _splitMode.value = null
 
         LogManager.i(TAG, "【蓝牙连接】资源清理完成")
     }
@@ -252,7 +259,9 @@ class BluetoothConnectionManager private constructor() {
      * @return 是否操作成功
      */
     suspend fun setSplitMode(enable: Boolean): Boolean {
-        return _civController.value?.setSplitMode(enable) ?: false
+        val ok = _civController.value?.setSplitMode(enable) ?: false
+        if (ok) _splitMode.value = enable
+        return ok
     }
 
     /**
@@ -260,7 +269,9 @@ class BluetoothConnectionManager private constructor() {
      * @return true=Split ON, false=Split OFF, null=读取失败
      */
     suspend fun readSplitMode(): Boolean? {
-        return _civController.value?.readSplitMode()
+        val s = _civController.value?.readSplitMode()
+        if (s != null) _splitMode.value = s
+        return s
     }
 
     /**
