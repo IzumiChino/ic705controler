@@ -798,6 +798,10 @@ fun SplashScreen(
     val context = LocalContext.current
     var permissionRationaleText by remember { mutableStateOf("") }
     var hasRequestedPermissions by remember { mutableStateOf(false) }
+    // 权限请求的最近一次结果，用于在主按钮旁给出具体反馈 + 永久拒绝时
+    // 展示"去应用设置"按钮。
+    var lastDeniedNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var lastPermanentlyDenied by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         permissionRationaleText = permissionManager?.getPermissionRationaleText()
@@ -866,22 +870,52 @@ fun SplashScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 32.dp)
                     )
+
+                    // 显示上一次请求被拒的权限清单 + 永久拒绝时给"去设置"按钮。
+                    // 以前只把主按钮置回可点，用户无从判断哪些被拒、为什么。
+                    if (lastDeniedNames.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "以下权限被拒绝: " + lastDeniedNames.joinToString("、"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
                             hasRequestedPermissions = true
                             permissionManager?.requestPermissions { result ->
-                                // 权限请求回调
                                 if (result.allGranted) {
+                                    lastDeniedNames = emptyList()
+                                    lastPermanentlyDenied = false
                                     onPermissionsGranted()
                                 } else {
                                     hasRequestedPermissions = false
+                                    lastDeniedNames = result.deniedPermissions.map {
+                                        permissionManager.getPermissionFriendlyName(it)
+                                    }
+                                    lastPermanentlyDenied = result.permanentlyDeniedPermissions.isNotEmpty()
                                 }
                             }
                         },
                         enabled = !hasRequestedPermissions
                     ) {
                         Text(if (hasRequestedPermissions) stringResource(R.string.splash_permission_waiting) else stringResource(R.string.splash_permission_grant))
+                    }
+
+                    // 有权限被永久拒绝时，系统不会再弹对话框；此时必须引导用户
+                    // 到应用详情页开关对应权限，否则他们会以为 app 卡死。
+                    if (lastPermanentlyDenied && !hasRequestedPermissions) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { permissionManager.openAppSettings() }
+                        ) {
+                            Text("去应用设置开启权限")
+                        }
                     }
                 }
             }
