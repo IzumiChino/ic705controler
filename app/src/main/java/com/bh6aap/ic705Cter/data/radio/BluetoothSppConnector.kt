@@ -49,11 +49,16 @@ class BluetoothSppConnector(private val bluetoothDevice: BluetoothDevice) {
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
     
-    // 内部组件
+    // 内部组件 —— 裸 Java Thread 与协程/主线程并发访问，字段需 @Volatile
+    @Volatile
     private var bluetoothSocket: BluetoothSocket? = null
+    @Volatile
     private var inputStream: InputStream? = null
+    @Volatile
     private var outputStream: OutputStream? = null
+    @Volatile
     private var isConnected = false
+    @Volatile
     private var receiveThread: Thread? = null
     
     /**
@@ -64,22 +69,32 @@ class BluetoothSppConnector(private val bluetoothDevice: BluetoothDevice) {
     suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
         _connectionState.value = ConnectionState.CONNECTING
         callback?.onConnectionStateChanged(ConnectionState.CONNECTING)
-        
+
         try {
+            // 安全前置：拒绝连接未配对设备，避免被同名/同地址但未授权的设备欺骗
+            if (bluetoothDevice.bondState != android.bluetooth.BluetoothDevice.BOND_BONDED) {
+                LogManager.e(TAG, "【蓝牙SPP】设备未配对，拒绝连接 (state=${bluetoothDevice.bondState})")
+                _connectionState.value = ConnectionState.ERROR
+                callback?.onConnectionStateChanged(ConnectionState.ERROR)
+                return@withContext false
+            }
+
             LogManager.i(TAG, "【蓝牙SPP】开始连接到设备: ${bluetoothDevice.name} (${bluetoothDevice.address})")
             LogManager.i(TAG, "【蓝牙SPP】SPP UUID: $SPP_UUID")
-            
+
             // 关闭已有的连接（不触发回调，避免清理资源）
             closeConnectionQuietly()
-            
+
             // 创建RFCOMM套接字
             val uuid = UUID.fromString(SPP_UUID)
             bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(uuid)
-            
+
             LogManager.d(TAG, "【蓝牙SPP】正在连接到RFCOMM服务...")
-            
-            // 连接到设备
-            bluetoothSocket?.connect()
+
+            // 连接到设备（带超时，避免悬挂）
+            kotlinx.coroutines.withTimeout(10_000L) {
+                bluetoothSocket?.connect()
+            }
             
             LogManager.d(TAG, "【蓝牙SPP】连接成功，获取输入输出流")
             
