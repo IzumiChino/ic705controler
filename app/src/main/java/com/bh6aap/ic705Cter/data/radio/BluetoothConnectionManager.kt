@@ -78,6 +78,15 @@ class BluetoothConnectionManager private constructor() {
     private val _splitMode = MutableStateFlow<Boolean?>(null)
     val splitMode: StateFlow<Boolean?> = _splitMode.asStateFlow()
 
+    // CI-V 命令失败 / 超时事件，供 Activity 订阅做 Toast / Snackbar。直接
+    // 暴露 CivController 的 SharedFlow 是 null-unsafe 的（重连后引用变化），
+    // 走这一层 wrapper 让订阅方统一对接 BluetoothConnectionManager。
+    private val _commandEvents = kotlinx.coroutines.flow.MutableSharedFlow<CivController.CivCommandEvent>(
+        replay = 0,
+        extraBufferCapacity = 16
+    )
+    val commandEvents: kotlinx.coroutines.flow.SharedFlow<CivController.CivCommandEvent> = _commandEvents
+
     // startStateSync 的 collector Job；重连时必须取消旧的，避免多个
     // collector 并发写 _vfoAFrequency 等 StateFlow。
     @Volatile
@@ -173,6 +182,14 @@ class BluetoothConnectionManager private constructor() {
     private fun startStateSync(civController: CivController) {
         stateSyncJob?.cancel()
         stateSyncJob = coroutineScope.launch {
+            // 一并把 CivController 的 commandEvents 桥接到本管理器；下游 UI
+            // 订阅 BluetoothConnectionManager.commandEvents 即可，不需要关
+            // 心 CivController 实例什么时候被换。
+            launch {
+                civController.commandEvents.collect { event ->
+                    _commandEvents.tryEmit(event)
+                }
+            }
             kotlinx.coroutines.flow.combine(
                 civController.vfoAFrequency,
                 civController.vfoAMode,

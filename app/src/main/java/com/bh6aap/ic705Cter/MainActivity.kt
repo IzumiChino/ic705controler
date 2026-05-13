@@ -208,6 +208,14 @@ class MainActivity : BaseActivity() {
                     }
                 }
 
+                // 监听 CI-V 命令失败 / 超时事件，弹 Toast 让用户能感知，
+                // 否则 UI 显示的频率/模式已变但电台其实未执行。
+                LaunchedEffect(Unit) {
+                    bluetoothConnectionManager.commandEvents.collect { event ->
+                        Toast.makeText(this@MainActivity, event.description, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
                 // 注意：VFO频率查询由CivController全权负责
                 // MainActivity不监听VFO频率和模式，避免干扰卫星跟踪的电台控制
                 // 所有VFO相关操作应在SatelliteTrackingActivity中进行
