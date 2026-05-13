@@ -388,14 +388,17 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
      * 设置指定VFO的模式
      * 参考 Look4Sat: setMode(Main: Boolean, mode: String)
      * 命令: 0x26, 子命令: 0x00=VFO A, 0x01=VFO B
-     * 数据: [模式码, 滤波器, 数据模式]
+     * 载荷格式: [mode, dataMode, filter]，与 setDataMode 使用的 [mode, data, filter]
+     * 完全一致。注意历史上这里的顺序写反过，会把非法值写进 Data 字节。
+     *
+     * 默认值 dataMode=0x00 (OFF)，filter=0x01 (FIL1)。
      */
-    suspend fun setVfoMode(vfo: Byte, mode: Byte, filter: Byte = 0x00, dataMode: Byte = 0x01): Boolean {
+    suspend fun setVfoMode(vfo: Byte, mode: Byte, dataMode: Byte = 0x00, filter: Byte = 0x01): Boolean {
         val vfoName = if (vfo == VFO_A) "VFO A" else "VFO B"
         val modeName = getModeName(mode)
         LogManager.i(TAG, "【CIV】设置 $vfoName 模式: $modeName")
 
-        val modeData = byteArrayOf(mode, filter, dataMode)
+        val modeData = byteArrayOf(mode, dataMode, filter)
         return callProcedure(CMD_SET_MODE, vfo, modeData)
     }
 
