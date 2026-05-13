@@ -28,8 +28,10 @@ class VfoQueryManager(private val connectionManager: BluetoothConnectionManager)
         val mode: String // 模式字符串，如 "USB"
     )
 
-    // 当前等待的响应
+    // 当前等待的响应 —— 蓝牙接收线程与协程并发访问，需 @Volatile
+    @Volatile
     private var pendingResponse: CompletableDeferred<ByteArray>? = null
+    @Volatile
     private var pendingCommandCode: Byte? = null
 
     /**
@@ -249,25 +251,33 @@ class VfoQueryManager(private val connectionManager: BluetoothConnectionManager)
      * @param response 响应数据
      */
     fun onResponseReceived(response: ByteArray) {
-        if (response.size < 5) {
+        if (response.size < 6) {
             LogManager.w(TAG, "【VFO查询】响应数据长度不足")
             return
         }
 
+        // 协议: response[2]=dst, response[3]=src。仅接受来自 IC-705 (0xA4) 的帧
+        val sourceAddr = response[3]
+        if (sourceAddr != 0xA4.toByte()) {
+            LogManager.w(TAG, "【VFO查询】响应源地址非 IC-705，忽略")
+            return
+        }
         val commandCode = response[4]
         val pendingCode = pendingCommandCode
 
         LogManager.d(TAG, "【VFO查询】收到响应，指令代码: 0x${String.format("%02X", commandCode)}, 等待的指令: ${if (pendingCode != null) "0x${String.format("%02X", pendingCode)}" else "null"}")
 
-        // 检查是否是我们正在等待的响应（包括 0xFB 成功确认响应）
+        // 检查是否是我们正在等待的响应。0xFB/0xFA 分别是 IC-705 的
+        // ACK/NACK；两种都要算作终态以免调用方一直等到 2s 超时。
         val isFbResponse = commandCode == 0xFB.toByte()
-        if (pendingCode != null && (commandCode == pendingCode || isFbResponse)) {
+        val isFaResponse = commandCode == 0xFA.toByte()
+        if (pendingCode != null && (commandCode == pendingCode || isFbResponse || isFaResponse)) {
             val deferred = pendingResponse
             if (deferred != null && !deferred.isCompleted) {
-                if (isFbResponse) {
-                    LogManager.i(TAG, "【VFO查询】收到 0xFB 成功确认，完成等待的指令 0x${String.format("%02X", pendingCode)}")
-                } else {
-                    LogManager.i(TAG, "【VFO查询】完成等待，指令 0x${String.format("%02X", commandCode)}")
+                when {
+                    isFbResponse -> LogManager.i(TAG, "【VFO查询】收到 0xFB 成功确认，完成等待的指令 0x${String.format("%02X", pendingCode)}")
+                    isFaResponse -> LogManager.w(TAG, "【VFO查询】收到 0xFA 失败确认，完成等待的指令 0x${String.format("%02X", pendingCode)}")
+                    else -> LogManager.i(TAG, "【VFO查询】完成等待，指令 0x${String.format("%02X", commandCode)}")
                 }
                 try {
                     deferred.complete(response)

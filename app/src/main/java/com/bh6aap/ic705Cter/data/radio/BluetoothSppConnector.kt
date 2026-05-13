@@ -10,6 +10,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,11 +50,16 @@ class BluetoothSppConnector(private val bluetoothDevice: BluetoothDevice) {
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
     
-    // 内部组件
+    // 内部组件 —— 裸 Java Thread 与协程/主线程并发访问，字段需 @Volatile
+    @Volatile
     private var bluetoothSocket: BluetoothSocket? = null
+    @Volatile
     private var inputStream: InputStream? = null
+    @Volatile
     private var outputStream: OutputStream? = null
+    @Volatile
     private var isConnected = false
+    @Volatile
     private var receiveThread: Thread? = null
     
     /**
@@ -64,22 +70,65 @@ class BluetoothSppConnector(private val bluetoothDevice: BluetoothDevice) {
     suspend fun connect(): Boolean = withContext(Dispatchers.IO) {
         _connectionState.value = ConnectionState.CONNECTING
         callback?.onConnectionStateChanged(ConnectionState.CONNECTING)
-        
+
         try {
+            // 安全前置：拒绝连接未配对设备，避免被同名/同地址但未授权的设备欺骗
+            if (bluetoothDevice.bondState != android.bluetooth.BluetoothDevice.BOND_BONDED) {
+                LogManager.e(TAG, "【蓝牙SPP】设备未配对，拒绝连接 (state=${bluetoothDevice.bondState})")
+                _connectionState.value = ConnectionState.ERROR
+                callback?.onConnectionStateChanged(ConnectionState.ERROR)
+                return@withContext false
+            }
+
             LogManager.i(TAG, "【蓝牙SPP】开始连接到设备: ${bluetoothDevice.name} (${bluetoothDevice.address})")
             LogManager.i(TAG, "【蓝牙SPP】SPP UUID: $SPP_UUID")
-            
+
             // 关闭已有的连接（不触发回调，避免清理资源）
             closeConnectionQuietly()
-            
+
             // 创建RFCOMM套接字
             val uuid = UUID.fromString(SPP_UUID)
             bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(uuid)
-            
+
             LogManager.d(TAG, "【蓝牙SPP】正在连接到RFCOMM服务...")
-            
-            // 连接到设备
-            bluetoothSocket?.connect()
+
+            // 连接到设备：BluetoothSocket.connect() 是阻塞 IO 调用，
+            // kotlinx withTimeout 的协程取消是协作式的，无法真正中断它。
+            // 启动一个独立的看门狗线程，在 10 秒后强制 close socket，
+            // 让阻塞的 connect() 抛 IOException 而提前返回。
+            val timedOut = AtomicBoolean(false)
+            val socketRef = bluetoothSocket
+            val connectDone = AtomicBoolean(false)
+            val watchdog = Thread({
+                try {
+                    Thread.sleep(10_000L)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+                if (!connectDone.get()) {
+                    timedOut.set(true)
+                    try {
+                        socketRef?.close()
+                    } catch (_: Exception) {
+                    }
+                }
+            }, "BluetoothSppConnector-watchdog").apply {
+                isDaemon = true
+                start()
+            }
+            try {
+                socketRef?.connect()
+            } finally {
+                connectDone.set(true)
+                watchdog.interrupt()
+            }
+            if (timedOut.get()) {
+                LogManager.e(TAG, "【蓝牙SPP】连接超时（10s），已强制关闭 socket")
+                _connectionState.value = ConnectionState.ERROR
+                callback?.onConnectionStateChanged(ConnectionState.ERROR)
+                disconnect()
+                return@withContext false
+            }
             
             LogManager.d(TAG, "【蓝牙SPP】连接成功，获取输入输出流")
             

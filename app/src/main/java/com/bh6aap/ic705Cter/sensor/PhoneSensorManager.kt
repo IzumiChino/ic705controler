@@ -109,7 +109,8 @@ class PhoneSensorManager(context: Context) : SensorEventListener {
         }
 
         if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-            updateOrientation(event.values)
+            // 系统会复用 event.values，必须 clone 后再使用
+            updateOrientation(event.values.clone())
         }
     }
 

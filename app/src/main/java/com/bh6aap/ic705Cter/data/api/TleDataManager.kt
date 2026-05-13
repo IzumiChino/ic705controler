@@ -26,10 +26,11 @@ class TleDataManager(private val context: Context) {
         private const val REQUEST_TIMEOUT_SECONDS = 30L
     }
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .build()
+    private val client = SecureHttp.buildSecureClient(
+        connectTimeoutSec = REQUEST_TIMEOUT_SECONDS,
+        readTimeoutSec = REQUEST_TIMEOUT_SECONDS,
+        callTimeoutSec = REQUEST_TIMEOUT_SECONDS + 5
+    )
 
     private val dbHelper = DatabaseHelper.getInstance(context)
 
@@ -83,14 +84,16 @@ class TleDataManager(private val context: Context) {
                         throw IOException("HTTP ${response.code}")
                     }
 
-                    val responseBody = response.body?.string()
-                        ?: throw IOException("Empty response")
+                    val responseBody = SecureHttp.readLimitedBody(response)
+                        ?: throw IOException("Empty/oversize response")
 
                     // 解析纯文本 TLE 数据
                     val satellites = parseTleData(responseBody)
                     allSatellites.addAll(satellites)
                     android.util.Log.i("TleDataManager", "从 Celestrak 获取了 ${satellites.size} 颗卫星")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("TleDataManager", "从 Celestrak 获取失败，尝试 SatNOGS: ${e.message}")
 
@@ -119,13 +122,15 @@ class TleDataManager(private val context: Context) {
                             throw IOException("HTTP ${response.code}")
                         }
 
-                        val responseBody = response.body?.string()
-                            ?: throw IOException("Empty response")
+                        val responseBody = SecureHttp.readLimitedBody(response)
+                            ?: throw IOException("Empty/oversize response")
 
                         val satellites = parseTleData(responseBody)
                         allSatellites.addAll(satellites)
                         android.util.Log.i("TleDataManager", "从 SatNOGS 获取了 ${satellites.size} 颗卫星")
                     }
+                } catch (e2: kotlinx.coroutines.CancellationException) {
+                    throw e2
                 } catch (e2: Exception) {
                     android.util.Log.e("TleDataManager", "从 SatNOGS 也失败: ${e2.message}")
                     throw e2
@@ -151,6 +156,8 @@ class TleDataManager(private val context: Context) {
             }
 
             return@withContext true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             return@withContext false

@@ -124,7 +124,9 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
         }
 
         if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-            updateOrientation(event.values)
+            // SensorEvent.values 是系统复用的数组，值随时可能被下一帧覆盖。
+            // 这里显式 clone 再下推，避免下游读到撕裂的姿态。
+            updateOrientation(event.values.clone())
         }
     }
 

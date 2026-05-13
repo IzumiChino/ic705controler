@@ -60,8 +60,10 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
     private val _lastResponse = MutableStateFlow<ByteArray?>(null)
     val lastResponse: StateFlow<ByteArray?> = _lastResponse.asStateFlow()
 
-    // 等待响应的Deferred
+    // 等待响应的Deferred —— 跨线程读写需要 @Volatile 保证可见性
+    @Volatile
     private var pendingResponse: CompletableDeferred<ByteArray>? = null
+    @Volatile
     private var pendingCommandCode: Byte? = null
     
     /**
@@ -206,6 +208,16 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
             VFO_TX -> "TX/VFO B"
             else -> "当前VFO"
         }
+        // 与 CivController.setVfoFrequency 保持一致的安全外壳：先拒硬件外频率，
+        // 再拒非 IC-705 合规频段，避免通过这条备用路径绕过合规白名单。
+        if (frequencyHz <= 0L || frequencyHz > 10_000_000_000L) {
+            LogManager.e(TAG, "【CIV指令】频率超出硬件范围 ($frequencyHz Hz)，拒绝写入")
+            return false
+        }
+        if (!isAllowedTxFrequency(frequencyHz)) {
+            LogManager.e(TAG, "【CIV指令】频率 ${frequencyHz / 1_000_000.0} MHz 不在合规发射频段，拒绝写入")
+            return false
+        }
         LogManager.i(TAG, "【CIV指令】设置频率: ${frequencyHz / 1000000.0} MHz, $vfoStr")
 
         // 编码频率为BCD格式（5字节）
@@ -218,6 +230,12 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
         // 发送并等待响应
         val response = sendCommandAndWaitForResponse(CMD_READ_FREQUENCY.toInt(), data)
         return response != null
+    }
+
+    private fun isAllowedTxFrequency(hz: Long): Boolean {
+        // 复用 CivController 中的同一份白名单，避免两条 TX 路径独立维护
+        // 而漂移；详见 CivController.ALLOWED_TX_RANGES_HZ。
+        return CivController.ALLOWED_TX_RANGES_HZ.any { (lo, hi) -> hz in lo..hi }
     }
     
     /**
@@ -392,24 +410,37 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
             return
         }
 
-        val sourceAddr = response[2]
-        val targetAddr = response[3]
+        // 协议中 response[2] 是目的地址、response[3] 是源地址。
+        // 之前的代码把字段名搞反了，这里同时纠正命名并做安全检查。
+        val targetAddr = response[2]
+        val sourceAddr = response[3]
         val commandCode = response[4]
 
         LogManager.d(TAG, "【CIV指令】响应源地址: 0x${String.format("%02X", sourceAddr)}")
         LogManager.d(TAG, "【CIV指令】响应目标地址: 0x${String.format("%02X", targetAddr)}")
         LogManager.d(TAG, "【CIV指令】响应指令代码: 0x${String.format("%02X", commandCode)}")
 
+        // 拒绝非 IC-705 来源的响应（防伪 SPP 端伪造 0xFB 通配确认污染状态）
+        if (sourceAddr != IC705_ADDRESS) {
+            LogManager.w(TAG, "【CIV指令】响应源地址非 IC-705，忽略")
+            return
+        }
+
         // 如果有等待的Deferred，完成它
         LogManager.d(TAG, "【CIV指令】检查等待状态 - pendingResponse: ${pendingResponse != null}, isCompleted: ${pendingResponse?.isCompleted}, pendingCommandCode: 0x${String.format("%02X", pendingCommandCode ?: 0)}")
         if (pendingResponse != null && !pendingResponse!!.isCompleted) {
-            // 检查响应是否匹配等待的命令
-            // 0xFB是忙/确认响应，可以视为对任何命令的成功响应
+            // 0xFB/0xFA 分别是 ACK/NACK；都视为对当前命令的终态回应，
+            // 以便调用方尽快拿到结果（而不是等 2s 超时）。
             val commandMatch = pendingCommandCode == commandCode
             val isFbResponse = commandCode == 0xFB.toByte()
-            LogManager.d(TAG, "【CIV指令】命令匹配: $commandMatch, 0xFB响应: $isFbResponse")
-            if (commandMatch || isFbResponse) {
-                LogManager.i(TAG, "【CIV指令】完成等待的Deferred")
+            val isFaResponse = commandCode == 0xFA.toByte()
+            LogManager.d(TAG, "【CIV指令】命令匹配: $commandMatch, 0xFB响应: $isFbResponse, 0xFA响应: $isFaResponse")
+            if (commandMatch || isFbResponse || isFaResponse) {
+                if (isFaResponse) {
+                    LogManager.w(TAG, "【CIV指令】收到 0xFA 失败确认，完成等待的Deferred")
+                } else {
+                    LogManager.i(TAG, "【CIV指令】完成等待的Deferred")
+                }
                 pendingResponse!!.complete(response)
             } else {
                 LogManager.w(TAG, "【CIV指令】响应不匹配 - 等待: 0x${String.format("%02X", pendingCommandCode ?: 0)}, 收到: 0x${String.format("%02X", commandCode)}")
