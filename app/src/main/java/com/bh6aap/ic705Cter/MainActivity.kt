@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -127,12 +128,15 @@ class MainActivity : BaseActivity() {
             Ic705controlerTheme {
                 var stationData by remember { mutableStateOf<StationEntity?>(null) }
                 var maidenheadGrid by remember { mutableStateOf("") }
-                var showBluetoothDialog by remember { mutableStateOf(false) }
+                // Dialog 打开/关闭状态走 rememberSaveable，屏幕旋转 / 低内存回
+                // 收后用户再切回前台时保留之前打开的弹窗，避免"正在操作被
+                // 系统无声推倒重来"。
+                var showBluetoothDialog by rememberSaveable { mutableStateOf(false) }
                 var connectionState by remember { mutableStateOf(bluetoothConnectionManager.getConnectionState()) }
                 val devicePreference = remember { BluetoothDevicePreference.getInstance(this@MainActivity) }
-                
+
                 // 退出确认对话框状态
-                var showExitDialog by remember { mutableStateOf(false) }
+                var showExitDialog by rememberSaveable { mutableStateOf(false) }
                 
                 // 处理返回键 - 显示退出确认对话框
                 BackHandler {
@@ -168,9 +172,9 @@ class MainActivity : BaseActivity() {
                 // 注意：VFO频率和模式不在主界面显示，由SatelliteTrackingActivity管理
                 var tleUpdateTime by remember { mutableStateOf(getString(R.string.main_tle_not_updated)) }
                 var transmitterUpdateTime by remember { mutableStateOf(getString(R.string.main_tle_not_updated)) }
-                var showSatelliteDialog by remember { mutableStateOf(false) }
+                var showSatelliteDialog by rememberSaveable { mutableStateOf(false) }
                 var refreshStationTrigger by remember { mutableStateOf(0) }
-                var showStationListDialog by remember { mutableStateOf(false) }
+                var showStationListDialog by rememberSaveable { mutableStateOf(false) }
 
                 // 从数据库加载TLE更新时间（支持 celestrak 和 satnogs）
                 LaunchedEffect(Unit) {
