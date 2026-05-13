@@ -45,16 +45,12 @@ jobs:
           # Gradle wrapper 已固定到 9.1.0，这里共享远程缓存
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
-      # compileSdk 36 对应 Android 16 平台。默认的 Android SDK 预装含最新
-      # 版本，但稳妥起见显式拉一份，避免 "Failed to find Platform SDK" 失败。
+      # compileSdk 36 对应 Android 16 平台。setup-android 默认会从项目读取
+      # compileSdk 自动安装匹配的平台与 build-tools，不需要再传 packages。
+      # 之前显式传 `tools` 在新版 cmdline-tools 中已废弃，会让 sdkmanager
+      # 退出码 1，导致整个 step 失败。
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platforms;android-36
-            build-tools;36.0.0
-            platform-tools
-            tools
 
       - name: Print toolchain info
         run: |
@@ -125,10 +121,6 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platforms;android-36
-            build-tools;36.0.0
 
       - name: Run Android Lint (debug)
         # 不让 lint 错误阻塞 CI（当前仓库基线尚未清零），但保留报告产物
