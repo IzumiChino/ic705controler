@@ -137,7 +137,16 @@ object SecureHttp {
 
     /**
      * 读取响应体但限制字节数，防止恶意服务器返回 GB 级响应 OOM。
-     * @return (body string, truncated flag)；body 为 null 表示读失败。
+     *
+     * 返回值：
+     *   - 正常读取且大小在 [0, limitBytes] 内 -> 完整 UTF-8 字符串
+     *   - 响应体为空、读取异常 -> null
+     *   - 响应体长度超过 limitBytes -> null（而不是截断）
+     *
+     * 之所以超限返回 null 而不是截断字符串，是因为所有调用方都按 null=
+     * "无法使用" 处理：半截 JSON / TLE 再喂给 Gson/parser 只会以难以
+     * 诊断的 parse error 失败，静默保留截断 body 会误导调用方当作合法
+     * 数据入库。要截断语义的调用方应该显式传入更大的 limitBytes。
      */
     fun readLimitedBody(response: Response, limitBytes: Long = DEFAULT_BODY_LIMIT_BYTES): String? {
         val body = response.body ?: return null
@@ -148,8 +157,8 @@ object SecureHttp {
             val buffered = source.buffer
             val size = buffered.size
             if (size > limitBytes) {
-                LogManager.w(TAG, "响应体超过 $limitBytes 字节上限，已截断")
-                buffered.readUtf8(limitBytes)
+                LogManager.w(TAG, "响应体超过 $limitBytes 字节上限，拒绝")
+                null
             } else {
                 buffered.readUtf8()
             }
