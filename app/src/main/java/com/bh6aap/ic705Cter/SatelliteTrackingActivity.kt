@@ -175,6 +175,9 @@ class SatelliteTrackingActivity : BaseActivity() {
             trackingController.stopTrackingWithoutReset()
             LogManager.i("SatelliteTracking", "界面销毁，蓝牙未连接，停止跟踪但不重置电台模式")
         }
+        // 取消 controllerScope 下所有挂起的协程，否则 StateFlow collector
+        // 会在 Activity 重建后累积，多套频率写入命令同时排队到 SPP 发送队列。
+        trackingController.cleanup()
     }
 
     companion object {
