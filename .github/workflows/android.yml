@@ -1,0 +1,158 @@
+name: Android CI
+
+on:
+  push:
+    branches: [master, main, security-fix-v2, 'security-fix/**']
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Assemble Debug & Release (unsigned)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # 避免 Gradle daemon 超时；CI 上启用 parallel + build cache
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs=-Xmx4g
+        -Dorg.gradle.parallel=true
+        -Dorg.gradle.caching=true
+        -Dorg.gradle.daemon=false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # AGP 9.0 + Gradle 9.x 需要 JDK 21
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Gradle wrapper 已固定到 9.1.0，这里共享远程缓存
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      # compileSdk 36 对应 Android 16 平台。默认的 Android SDK 预装含最新
+      # 版本，但稳妥起见显式拉一份，避免 "Failed to find Platform SDK" 失败。
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-36
+            build-tools;36.0.0
+            platform-tools
+            tools
+
+      - name: Print toolchain info
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          ./gradlew --version
+
+      - name: Assemble Debug
+        run: ./gradlew :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Assemble Release (unsigned)
+        run: ./gradlew :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Collect APKs
+        run: |
+          mkdir -p artifacts
+          find app/build/outputs/apk -type f -name '*.apk' -print -exec cp {} artifacts/ \;
+          ls -lh artifacts
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ic705-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload release APK (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ic705-release-apk-unsigned
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload all APKs (fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ic705-all-apks
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  lint-and-test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs=-Xmx4g
+        -Dorg.gradle.parallel=true
+        -Dorg.gradle.caching=true
+        -Dorg.gradle.daemon=false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-36
+            build-tools;36.0.0
+
+      - name: Run Android Lint (debug)
+        # 不让 lint 错误阻塞 CI（当前仓库基线尚未清零），但保留报告产物
+        run: ./gradlew :app:lintDebug --stacktrace --no-daemon || true
+
+      - name: Run Unit Tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: |
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/
+          if-no-files-found: warn
+          retention-days: 14
