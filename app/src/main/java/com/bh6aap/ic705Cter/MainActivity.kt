@@ -1690,24 +1690,48 @@ fun SatellitePassList(
                                             pass.aosTime
                                         )
                                         // 调度通知
-                                        val scheduled = PassNotificationManager.schedulePassNotification(
+                                        val scheduleResult = PassNotificationManager.schedulePassNotification(
                                             context,
                                             pass,
                                             displayName,
                                             reminderMinutes
                                         )
-                                        if (scheduled) {
-                                            Toast.makeText(
-                                                context,
-                                                "已设置提醒：${displayName} 过境前${reminderMinutes}分钟通知",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "已设置提醒（非精确）：${displayName} 过境前${reminderMinutes}分钟通知",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                        when (scheduleResult) {
+                                            is PassNotificationManager.ScheduleResult.Exact ->
+                                                Toast.makeText(
+                                                    context,
+                                                    "已设置提醒：${displayName} 过境前${reminderMinutes}分钟通知",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            is PassNotificationManager.ScheduleResult.Inexact ->
+                                                Toast.makeText(
+                                                    context,
+                                                    "已设置提醒（非精确）：${displayName} 过境前${reminderMinutes}分钟通知",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            is PassNotificationManager.ScheduleResult.PassTooSoon -> {
+                                                // 过境时刻在 reminderMinutes 内：恢复 UI、撤销 enableNotification
+                                                notificationDataStore.disableNotification(
+                                                    pass.noradId,
+                                                    pass.aosTime
+                                                )
+                                                Toast.makeText(
+                                                    context,
+                                                    "无法设置提醒：${displayName} 过境时刻已临近，少于${reminderMinutes}分钟",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                            is PassNotificationManager.ScheduleResult.Failed -> {
+                                                notificationDataStore.disableNotification(
+                                                    pass.noradId,
+                                                    pass.aosTime
+                                                )
+                                                Toast.makeText(
+                                                    context,
+                                                    "设置提醒失败：${scheduleResult.reason}",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
                                         }
                                     } else {
                                         // 禁用通知
