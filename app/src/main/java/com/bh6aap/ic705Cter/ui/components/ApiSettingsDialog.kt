@@ -394,17 +394,21 @@ fun ApiSettingsDialog(
  */
 suspend fun fetchCustomTleData(context: Context, url: String): Boolean {
     return try {
-        LogManager.i("ApiSettings", "从自定义API获取TLE数据: $url")
+        LogManager.i("ApiSettings", "从自定义API获取TLE数据")
 
-        val client = okhttp3.OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
+        val client = com.bh6aap.ic705Cter.data.api.SecureHttp.buildSecureClient(
+            connectTimeoutSec = 30L,
+            readTimeoutSec = 30L,
+            callTimeoutSec = 35L
+        )
 
-        val request = okhttp3.Request.Builder()
-            .url(url)
-            .header("Accept", "text/plain, */*")
-            .build()
+        val request = com.bh6aap.ic705Cter.data.api.SecureHttp.buildValidatedRequest(
+            url,
+            headers = mapOf("Accept" to "text/plain, */*")
+        ) ?: run {
+            LogManager.e("ApiSettings", "自定义 TLE URL 未通过安全校验")
+            return false
+        }
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
@@ -412,7 +416,7 @@ suspend fun fetchCustomTleData(context: Context, url: String): Boolean {
                 return false
             }
 
-            val body = response.body?.string()
+            val body = com.bh6aap.ic705Cter.data.api.SecureHttp.readLimitedBody(response)
                 ?: return false
 
             // 解析TLE数据
@@ -429,6 +433,8 @@ suspend fun fetchCustomTleData(context: Context, url: String): Boolean {
                 return false
             }
         }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
     } catch (e: Exception) {
         LogManager.e("ApiSettings", "获取自定义TLE数据失败", e)
         return false

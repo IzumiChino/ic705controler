@@ -4,7 +4,6 @@ import com.bh6aap.ic705Cter.util.LogManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -35,12 +34,13 @@ object ApiTypeValidator {
         val sampleData: String? = null
     )
 
-    // HTTP客户端
-    private val client by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .build()
+    // HTTP客户端：使用全局安全工厂（关闭重定向、callTimeout、https-only）
+    private val client: OkHttpClient by lazy {
+        SecureHttp.buildSecureClient(
+            connectTimeoutSec = 10L,
+            readTimeoutSec = 10L,
+            callTimeoutSec = 15L
+        )
     }
 
     /**
@@ -54,90 +54,82 @@ object ApiTypeValidator {
         expectedType: ApiType? = null
     ): ValidationResult = withContext(Dispatchers.IO) {
         try {
-            LogManager.i(TAG, "开始验证API: $url")
+            LogManager.i(TAG, "开始验证API")
 
-            // 检查URL格式
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = ApiType.INVALID,
-                    message = "URL格式错误，必须以http://或https://开头"
-                )
-            }
-
-            // 发送请求
-            val request = Request.Builder()
-                .url(url)
-                .header("Accept", "application/json")
-                .build()
-
-            val response = client.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = ApiType.INVALID,
-                    message = "HTTP错误: ${response.code} - ${response.message}"
-                )
-            }
-
-            val body = response.body?.string()
-                ?: return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = ApiType.INVALID,
-                    message = "API返回空数据"
-                )
-
-            // 尝试解析API类型 (支持JSON和纯文本格式)
-            val detectedType = detectApiType(body, url)
-
-            // 如果指定了期望类型，检查是否匹配
-            if (expectedType != null && detectedType != expectedType) {
-                return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = detectedType,
-                    message = "API类型不匹配。期望: ${getTypeName(expectedType)}, 实际: ${getTypeName(detectedType)}",
-                    sampleData = body.take(200)
-                )
-            }
-
-            // 检查是否有效类型
-            if (detectedType == ApiType.UNKNOWN) {
-                return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = ApiType.UNKNOWN,
-                    message = "无法识别API数据类型，请检查API格式",
-                    sampleData = body.take(200)
-                )
-            }
-
-            if (detectedType == ApiType.INVALID) {
-                return@withContext ValidationResult(
-                    isValid = false,
-                    apiType = ApiType.INVALID,
-                    message = "API返回的数据格式无效",
-                    sampleData = body.take(200)
-                )
-            }
-
-            // 验证成功
-            return@withContext ValidationResult(
-                isValid = true,
-                apiType = detectedType,
-                message = "API验证成功: ${getTypeName(detectedType)}",
-                sampleData = body.take(200)
+            // SSRF / URL 护栏：只允许 https、禁 userinfo、禁内网/回环/元数据
+            val request = SecureHttp.buildValidatedRequest(
+                url,
+                headers = mapOf("Accept" to "application/json")
+            ) ?: return@withContext ValidationResult(
+                isValid = false,
+                apiType = ApiType.INVALID,
+                message = "URL 校验未通过（只允许 https，禁止内网/回环/元数据地址与 userinfo）"
             )
 
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext ValidationResult(
+                        isValid = false,
+                        apiType = ApiType.INVALID,
+                        message = "HTTP错误: ${response.code}"
+                    )
+                }
+
+                val body = SecureHttp.readLimitedBody(response)
+                    ?: return@withContext ValidationResult(
+                        isValid = false,
+                        apiType = ApiType.INVALID,
+                        message = "API返回空或过大数据"
+                    )
+
+                val detectedType = detectApiType(body, url)
+
+                if (expectedType != null && detectedType != expectedType) {
+                    return@withContext ValidationResult(
+                        isValid = false,
+                        apiType = detectedType,
+                        message = "API类型不匹配。期望: ${getTypeName(expectedType)}, 实际: ${getTypeName(detectedType)}",
+                        sampleData = body.take(200)
+                    )
+                }
+
+                if (detectedType == ApiType.UNKNOWN) {
+                    return@withContext ValidationResult(
+                        isValid = false,
+                        apiType = ApiType.UNKNOWN,
+                        message = "无法识别API数据类型，请检查API格式",
+                        sampleData = body.take(200)
+                    )
+                }
+
+                if (detectedType == ApiType.INVALID) {
+                    return@withContext ValidationResult(
+                        isValid = false,
+                        apiType = ApiType.INVALID,
+                        message = "API返回的数据格式无效",
+                        sampleData = body.take(200)
+                    )
+                }
+
+                ValidationResult(
+                    isValid = true,
+                    apiType = detectedType,
+                    message = "API验证成功: ${getTypeName(detectedType)}",
+                    sampleData = body.take(200)
+                )
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: IOException) {
             LogManager.e(TAG, "API验证网络错误", e)
-            return@withContext ValidationResult(
+            ValidationResult(
                 isValid = false,
                 apiType = ApiType.INVALID,
                 message = "网络错误: ${e.message ?: "无法连接到API"}"
             )
         } catch (e: Exception) {
             LogManager.e(TAG, "API验证错误", e)
-            return@withContext ValidationResult(
+            ValidationResult(
                 isValid = false,
                 apiType = ApiType.INVALID,
                 message = "验证错误: ${e.message ?: "未知错误"}"
