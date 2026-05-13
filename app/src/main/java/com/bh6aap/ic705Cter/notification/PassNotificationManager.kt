@@ -111,6 +111,14 @@ object PassNotificationManager {
         satelliteName: String,
         reminderMinutes: Int = 5
     ): ScheduleResult {
+        // Android 13+ 用户可能拒绝了 POST_NOTIFICATIONS；通知通道也可能被
+        // 用户禁用。提前判断让 UI 能给出 actionable 反馈，而不是悄悄注册一
+        // 个发不出来的闹钟。
+        if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            LogManager.w("PassNotification", "通知被系统禁用，无法调度: $satelliteName")
+            return ScheduleResult.Failed("通知权限被禁用，请在系统设置开启")
+        }
+
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val notificationTime = pass.aosTime - reminderMinutes * 60 * 1000 // 过境前 reminderMinutes 分钟
 
