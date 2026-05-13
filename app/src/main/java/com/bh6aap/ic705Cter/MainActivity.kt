@@ -455,7 +455,7 @@ class MainActivity : BaseActivity() {
                             Surface(
                                 modifier = Modifier
                                     .size(connectionCardHeight)
-                                    .clickable {
+                                    .clickable(enabled = isBtConnected) {
                                         // 先设置电台模式为CW，然后跳转到摩尔斯页面
                                         lifecycleScope.launch {
                                             val civController = bluetoothConnectionManager.civController.value
@@ -466,10 +466,22 @@ class MainActivity : BaseActivity() {
                                                 if (vfoASuccess && vfoBSuccess) {
                                                     LogManager.i("MainActivity", "【主界面】设置电台模式为CW成功")
                                                 } else {
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        "设置 CW 模式失败，请检查电台连接",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                     LogManager.w("MainActivity", "【主界面】设置电台模式为CW失败或电台未连接")
+                                                    return@launch
                                                 }
                                             } else {
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    "请先连接 IC-705",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                                 LogManager.w("MainActivity", "【主界面】CIV控制器未初始化，无法设置CW模式")
+                                                return@launch
                                             }
                                             // 跳转到摩尔斯页面
                                             val intent = Intent(this@MainActivity, MorseCodeActivity::class.java)
