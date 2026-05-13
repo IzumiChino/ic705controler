@@ -66,8 +66,11 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
          *
          * 注: 这是硬件能力外壳的保守白名单，不替代操作员对各国/地区频段
          * 分配（如美国 ITU Region 2、中国/日本 Region 3）的责任。
+         *
+         * `internal` 暴露给同模块的 CivCommandManager.writeFrequency 复用，
+         * 保证两条 TX 路径走同一份白名单，不再有手工抄录漂移的风险。
          */
-        private val ALLOWED_TX_RANGES_HZ: List<Pair<Long, Long>> = listOf(
+        internal val ALLOWED_TX_RANGES_HZ: List<Pair<Long, Long>> = listOf(
             30_000L to 30_000_000L,
             50_000_000L to 54_000_000L,
             144_000_000L to 148_000_000L,

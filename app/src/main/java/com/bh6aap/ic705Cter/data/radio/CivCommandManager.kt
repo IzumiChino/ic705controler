@@ -233,11 +233,9 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
     }
 
     private fun isAllowedTxFrequency(hz: Long): Boolean {
-        // 需与 CivController.ALLOWED_TX_RANGES_HZ 保持同步
-        return (hz in 30_000L..30_000_000L) ||
-            (hz in 50_000_000L..54_000_000L) ||
-            (hz in 144_000_000L..148_000_000L) ||
-            (hz in 430_000_000L..450_000_000L)
+        // 复用 CivController 中的同一份白名单，避免两条 TX 路径独立维护
+        // 而漂移；详见 CivController.ALLOWED_TX_RANGES_HZ。
+        return CivController.ALLOWED_TX_RANGES_HZ.any { (lo, hi) -> hz in lo..hi }
     }
     
     /**
