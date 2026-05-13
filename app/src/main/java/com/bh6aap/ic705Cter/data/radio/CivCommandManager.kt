@@ -60,8 +60,10 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
     private val _lastResponse = MutableStateFlow<ByteArray?>(null)
     val lastResponse: StateFlow<ByteArray?> = _lastResponse.asStateFlow()
 
-    // 等待响应的Deferred
+    // 等待响应的Deferred —— 跨线程读写需要 @Volatile 保证可见性
+    @Volatile
     private var pendingResponse: CompletableDeferred<ByteArray>? = null
+    @Volatile
     private var pendingCommandCode: Byte? = null
     
     /**
@@ -206,6 +208,16 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
             VFO_TX -> "TX/VFO B"
             else -> "当前VFO"
         }
+        // 与 CivController.setVfoFrequency 保持一致的安全外壳：先拒硬件外频率，
+        // 再拒非 IC-705 合规频段，避免通过这条备用路径绕过合规白名单。
+        if (frequencyHz <= 0L || frequencyHz > 10_000_000_000L) {
+            LogManager.e(TAG, "【CIV指令】频率超出硬件范围 ($frequencyHz Hz)，拒绝写入")
+            return false
+        }
+        if (!isAllowedTxFrequency(frequencyHz)) {
+            LogManager.e(TAG, "【CIV指令】频率 ${frequencyHz / 1_000_000.0} MHz 不在合规发射频段，拒绝写入")
+            return false
+        }
         LogManager.i(TAG, "【CIV指令】设置频率: ${frequencyHz / 1000000.0} MHz, $vfoStr")
 
         // 编码频率为BCD格式（5字节）
@@ -218,6 +230,14 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
         // 发送并等待响应
         val response = sendCommandAndWaitForResponse(CMD_READ_FREQUENCY.toInt(), data)
         return response != null
+    }
+
+    private fun isAllowedTxFrequency(hz: Long): Boolean {
+        // 需与 CivController.ALLOWED_TX_RANGES_HZ 保持同步
+        return (hz in 30_000L..30_000_000L) ||
+            (hz in 50_000_000L..54_000_000L) ||
+            (hz in 144_000_000L..148_000_000L) ||
+            (hz in 430_000_000L..450_000_000L)
     }
     
     /**
@@ -392,13 +412,21 @@ class CivCommandManager(private val sppConnector: BluetoothSppConnector) {
             return
         }
 
-        val sourceAddr = response[2]
-        val targetAddr = response[3]
+        // 协议中 response[2] 是目的地址、response[3] 是源地址。
+        // 之前的代码把字段名搞反了，这里同时纠正命名并做安全检查。
+        val targetAddr = response[2]
+        val sourceAddr = response[3]
         val commandCode = response[4]
 
         LogManager.d(TAG, "【CIV指令】响应源地址: 0x${String.format("%02X", sourceAddr)}")
         LogManager.d(TAG, "【CIV指令】响应目标地址: 0x${String.format("%02X", targetAddr)}")
         LogManager.d(TAG, "【CIV指令】响应指令代码: 0x${String.format("%02X", commandCode)}")
+
+        // 拒绝非 IC-705 来源的响应（防伪 SPP 端伪造 0xFB 通配确认污染状态）
+        if (sourceAddr != IC705_ADDRESS) {
+            LogManager.w(TAG, "【CIV指令】响应源地址非 IC-705，忽略")
+            return
+        }
 
         // 如果有等待的Deferred，完成它
         LogManager.d(TAG, "【CIV指令】检查等待状态 - pendingResponse: ${pendingResponse != null}, isCompleted: ${pendingResponse?.isCompleted}, pendingCommandCode: 0x${String.format("%02X", pendingCommandCode ?: 0)}")

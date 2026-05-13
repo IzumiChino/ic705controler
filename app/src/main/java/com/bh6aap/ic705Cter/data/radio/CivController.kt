@@ -56,6 +56,23 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
         const val MODE_FM: Byte = 0x05
         const val MODE_CW_R: Byte = 0x07
         const val MODE_RTTY_R: Byte = 0x08
+
+        /**
+         * IC-705 合规可发射频段（Hz, 闭区间）
+         * - 0.030–30 MHz: 通段 HF（含 160m～10m 业余段及 WARC 30/17/12m）
+         * - 50.0–54.0 MHz: 6m
+         * - 144.0–148.0 MHz: 2m
+         * - 430.0–450.0 MHz: 70cm
+         *
+         * 注: 这是硬件能力外壳的保守白名单，不替代操作员对各国/地区频段
+         * 分配（如美国 ITU Region 2、中国/日本 Region 3）的责任。
+         */
+        private val ALLOWED_TX_RANGES_HZ: List<Pair<Long, Long>> = listOf(
+            30_000L to 30_000_000L,
+            50_000_000L to 54_000_000L,
+            144_000_000L to 148_000_000L,
+            430_000_000L to 450_000_000L
+        )
     }
 
     // 状态管理
@@ -267,19 +284,32 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
      */
     suspend fun setVfoFrequency(vfo: Byte, frequencyHz: Long): Boolean {
         val vfoName = if (vfo == VFO_A) "VFO A" else "VFO B"
-        // Reject obviously out-of-range values that may originate from a NaN/Infinity
-        // Doppler calculation converting to Long (yields Long.MAX_VALUE) or from a
-        // malformed BCD response.  IC-705 covers 30 kHz to 199.999999 MHz on most
-        // bands; the absolute hardware limit is below 2 GHz.  Reject anything above
-        // 10 GHz as physically impossible.
+        // 硬件硬限：<=0 或 >10 GHz 直接拒绝（防 NaN/Infinity 转 Long 溢出和伪 BCD 帧污染）
         if (frequencyHz <= 0L || frequencyHz > 10_000_000_000L) {
-            LogManager.e(TAG, "【CIV】频率超出有效范围 ($frequencyHz Hz)，拒绝发送到电台")
+            LogManager.e(TAG, "【CIV】频率超出硬件范围 ($frequencyHz Hz)，拒绝发送到电台")
+            return false
+        }
+        // IC-705 可发射频段白名单（业余频段 + 0.03-30 MHz 整个 HF 通段）
+        // 注: 此处为保守合规护栏，不替代操作员对本地法规的责任。
+        if (!isAllowedFrequency(frequencyHz)) {
+            LogManager.e(TAG, "【CIV】频率 ${frequencyHz / 1_000_000.0} MHz 不在 IC-705 合规频段，拒绝发送")
             return false
         }
         LogManager.i(TAG, "【CIV】设置 $vfoName 频率: ${frequencyHz / 1000000.0} MHz")
 
         val freqBcd = frequencyToBcd(frequencyHz)
         return callProcedure(CMD_SET_FREQUENCY, vfo, freqBcd.reversedArray())
+    }
+
+    /**
+     * IC-705 合规发射频段白名单（保守选择，允许 HF 0.03–30 MHz 以及
+     * 50/70/144/430 MHz 业余段）。
+     */
+    private fun isAllowedFrequency(hz: Long): Boolean {
+        for ((lo, hi) in ALLOWED_TX_RANGES_HZ) {
+            if (hz in lo..hi) return true
+        }
+        return false
     }
 
     /**
@@ -656,6 +686,12 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
         if (targetAddress != CONTROLLER_ADDRESS && targetAddress != 0x00.toByte()) {
             return
         }
+        // 新增：响应来源必须是 IC-705 自身。拒绝接受"乱入"的伪 SPP 端伪造的
+        // 0xFB/0xFA，以免把未执行的命令误认为成功并污染上层状态机。
+        if (sourceAddress != IC705_ADDRESS) {
+            LogManager.w(TAG, "【CIV】响应源地址非 IC-705 (0x${String.format("%02X", sourceAddress)})，忽略")
+            return
+        }
 
         // Capture both volatile fields into local variables so we do a single
         // consistent read of each; avoids the TOCTOU window between the null
@@ -664,7 +700,13 @@ class CivController(private val sppConnector: BluetoothSppConnector) {
         val pending = pendingResponse
         val expected = pendingCommandCode
         if (pending != null && !pending.isCompleted && expected != null) {
-            if (commandCode == 0xFB.toByte() || commandCode == expected) {
+            // 0xFB/0xFA 是 IC-705 对 set 类命令的 ack/nack，本身无载荷；因此
+            // 对任何期望型号都可能收到。安全性由上面的"源必须是 IC-705"
+            // 校验承担——只有真正来自电台的 0xFB/0xFA 才会被采纳。
+            if (commandCode == expected ||
+                commandCode == 0xFB.toByte() ||
+                commandCode == 0xFA.toByte()
+            ) {
                 pending.complete(response)
                 return
             }
