@@ -210,9 +210,19 @@ class MainActivity : BaseActivity() {
 
                 // 监听 CI-V 命令失败 / 超时事件，弹 Toast 让用户能感知，
                 // 否则 UI 显示的频率/模式已变但电台其实未执行。
+                // 用 2 秒的 distinct 节流：tracking 循环在带外频段上会以
+                // 500ms 频次 emit FrequencyOutOfRange，不节流会连环弹 Toast
+                // 把屏幕堵住。
                 LaunchedEffect(Unit) {
+                    var lastDesc: String? = null
+                    var lastAt = 0L
                     bluetoothConnectionManager.commandEvents.collect { event ->
-                        Toast.makeText(this@MainActivity, event.description, Toast.LENGTH_SHORT).show()
+                        val now = System.currentTimeMillis()
+                        if (event.description != lastDesc || now - lastAt > 2_000L) {
+                            Toast.makeText(this@MainActivity, event.description, Toast.LENGTH_SHORT).show()
+                            lastDesc = event.description
+                            lastAt = now
+                        }
                     }
                 }
 
