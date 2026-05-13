@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Assemble Debug & Release (unsigned)
+    name: Assemble Debug & Release (CI-signed)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -58,11 +58,35 @@ jobs:
           java -version
           ./gradlew --version
 
+      # AGP 9.0 不再为没有显式 signingConfig 的 release build 回退 debug
+      # keystore，所以 packageRelease 会以
+      #   SigningConfig "release" is missing required property "storeFile"
+      # 失败。CI 里临时生成一把 keystore 注入给 release build；keystore
+      # 文件和密码都只存在于本次 runner 实例，产物 APK 仅供 CI 验证，不
+      # 能用于发布到商店。
+      - name: Generate ephemeral signing key
+        run: |
+          keytool -genkeypair \
+            -alias ciRelease \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 36500 \
+            -storetype PKCS12 \
+            -keystore "$RUNNER_TEMP/ci-release.p12" \
+            -storepass ci-release-pass \
+            -keypass ci-release-pass \
+            -dname "CN=CI Build, OU=ic705controler, O=IzumiChino, C=US"
+
       - name: Assemble Debug
         run: ./gradlew :app:assembleDebug --stacktrace --no-daemon
 
-      - name: Assemble Release (unsigned)
-        run: ./gradlew :app:assembleRelease --stacktrace --no-daemon
+      - name: Assemble Release (CI-signed)
+        run: |
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon \
+            "-Pandroid.injected.signing.store.file=$RUNNER_TEMP/ci-release.p12" \
+            -Pandroid.injected.signing.store.password=ci-release-pass \
+            -Pandroid.injected.signing.key.alias=ciRelease \
+            -Pandroid.injected.signing.key.password=ci-release-pass
 
       - name: Collect APKs
         run: |
@@ -78,10 +102,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload release APK (unsigned)
+      - name: Upload release APK (CI-signed)
         uses: actions/upload-artifact@v4
         with:
-          name: ic705-release-apk-unsigned
+          name: ic705-release-apk-ci-signed
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
