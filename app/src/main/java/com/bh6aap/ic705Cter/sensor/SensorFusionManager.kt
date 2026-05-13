@@ -41,6 +41,12 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
 
     // 地磁偏角（根据GPS位置计算）
     private var magneticDeclination = 0f
+    // 最近一次用于计算磁偏角的位置（lat/lon/alt）。calibrate() 之后用它
+    // 重新算偏角，否则会停在 0° 直到下一次 GPS 回调，跨城市移动 + 校准
+    // 之间用户朝向会朝磁北而非真北。
+    private var lastDeclinationLat: Double? = null
+    private var lastDeclinationLon: Double? = null
+    private var lastDeclinationAlt: Double = 0.0
 
     /**
      * 融合后的姿态数据
@@ -98,6 +104,9 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
                 System.currentTimeMillis()
             )
             magneticDeclination = geomagneticField.declination
+            lastDeclinationLat = location.latitude
+            lastDeclinationLon = location.longitude
+            lastDeclinationAlt = location.altitude
             LogManager.d(TAG, "地磁偏角更新: ${magneticDeclination}°")
         } catch (e: Exception) {
             LogManager.w(TAG, "计算地磁偏角失败", e)
@@ -178,6 +187,19 @@ class SensorFusionManager(private val context: Context) : SensorEventListener {
         LogManager.i(TAG, "开始传感器校准")
         // 重置地磁偏角
         magneticDeclination = 0f
+        // 如果之前已经从 GPS 拿到过位置，重新算一次，避免直到下一次
+        // GPS 回调期间用户朝向偏离真北。
+        val lat = lastDeclinationLat
+        val lon = lastDeclinationLon
+        if (lat != null && lon != null) {
+            val cached = Location("").apply {
+                latitude = lat
+                longitude = lon
+                altitude = lastDeclinationAlt
+            }
+            updateMagneticDeclination(cached)
+            LogManager.i(TAG, "校准后用缓存位置重算磁偏角: ${magneticDeclination}°")
+        }
         LogManager.i(TAG, "传感器校准完成")
     }
 }
