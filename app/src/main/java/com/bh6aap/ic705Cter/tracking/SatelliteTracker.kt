@@ -142,10 +142,6 @@ class SatelliteTracker private constructor(private val context: Context) {
      * @param currentTime 当前时间
      * @param targetSatelliteId 目标卫星ID（可选），如果指定则只有该卫星会更新多普勒缓存
      * @param downlinkFreqHz 下行频率（Hz），用于计算多普勒频移，默认435MHz
-     */
-    /**
-     * @param targetSatelliteId 目标卫星ID（可选），如果指定则只有该卫星会更新多普勒缓存
-     * @param downlinkFreqHz 下行频率（Hz），用于计算多普勒频移，默认435MHz
      * @param updateCache 是否允许写入 DopplerDataCache。调用方同时有后台跟踪
      *                    循环在写 cache 时应传 false，避免历史窗口被双倍样本
      *                    污染导致预测斜率失真。
