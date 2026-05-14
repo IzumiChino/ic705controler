@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -863,7 +864,9 @@ fun SplashScreen(
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 } else {
-                    // 需要请求权限
+                    // 需要请求权限。把 nullable parameter 捕获成本地非空 val，
+                    // 避免在 onClick lambda 里因 smart-cast 失败而无法编译。
+                    val pm = permissionManager
                     Text(
                         text = permissionRationaleText,
                         style = MaterialTheme.typography.bodyMedium,
@@ -888,7 +891,7 @@ fun SplashScreen(
                     Button(
                         onClick = {
                             hasRequestedPermissions = true
-                            permissionManager?.requestPermissions { result ->
+                            pm?.requestPermissions { result ->
                                 if (result.allGranted) {
                                     lastDeniedNames = emptyList()
                                     lastPermanentlyDenied = false
@@ -896,7 +899,7 @@ fun SplashScreen(
                                 } else {
                                     hasRequestedPermissions = false
                                     lastDeniedNames = result.deniedPermissions.map {
-                                        permissionManager.getPermissionFriendlyName(it)
+                                        pm.getPermissionFriendlyName(it)
                                     }
                                     lastPermanentlyDenied = result.permanentlyDeniedPermissions.isNotEmpty()
                                 }
@@ -909,10 +912,10 @@ fun SplashScreen(
 
                     // 有权限被永久拒绝时，系统不会再弹对话框；此时必须引导用户
                     // 到应用详情页开关对应权限，否则他们会以为 app 卡死。
-                    if (lastPermanentlyDenied && !hasRequestedPermissions) {
+                    if (lastPermanentlyDenied && !hasRequestedPermissions && pm != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
-                            onClick = { permissionManager.openAppSettings() }
+                            onClick = { pm.openAppSettings() }
                         ) {
                             Text("去应用设置开启权限")
                         }
